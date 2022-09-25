@@ -31,8 +31,6 @@ class Dictionary:
         self.token2ind = {'<PAD>':0,'<START>':1,'<END>':2,'<UNK>':3}
         self.start_index = 0
         self.end_index = len(self.ind2token)
-    def convert_tokens_to_ids(self,sentence):
-        word2ids = list(sentence)
     def __iter__(self):
         return self
     def __next__(self):
@@ -92,51 +90,70 @@ class ContentReviewDataset(Dataset):
         self.max_limit_len = max_limit_len
     def __getitem__(self,idx):
         re_val = copy.copy(self.dataset[idx])
-        content = [self.chars_dict[w] for w in list(self.dataset[idx]['content'].replace(" ",""))]
-        re_val['content'] = content
+        content_chars = [self.chars_dict[w] for w in list(self.dataset[idx]['content'].replace(" ",""))]
+        re_val['content_chars'] = content_chars
+        content_words = [self.words_dict[w] for w in list(self.dataset[idx]['content'].split())]
+        re_val['content_words'] = content_words
         id2words = [self.words_dict[w] for w in self.dataset[idx]['id2words']]
         re_val['id2words'] = id2words
         return re_val
     def __len__(self,):
         return len(self.dataset)
 def batchfy(batch):
+    """_summary_
+    Args:
+        batch : batchfy the dataset
+    Returns:
+        dict: 
+        id2words,i_mask
+        content_chars,c_mask
+        content_words,w_mask
+        entropy_mat,paris_mat
+        labels_list
+    """
+    re_dict = {}
     index_list = [item['index'] for item in batch]
-    max_content_len = max([len(item['content']) for item in batch])
+    # key words
     max_words_len =  max([len(item['id2words']) for item in batch])
-    
-    id2words_list = [item['id2words'] for item in batch]
-    
-    content_list = [item['content']+(max_content_len-len(item['content']))*[0] for item in batch]
-    content_list = np.array(content_list)
-    c_mask_list = [len(item['content'])*[1]+(max_content_len-len(item['content']))*[0] for item in batch]
-    c_mask_list = np.array(c_mask_list)
-    
     id2words_list = [item['id2words']+(max_words_len-len(item['id2words']))*[0] for item in batch]
-    id2words_list = np.array(id2words_list)
+    id2words_list = np.array(id2words_list,dtype=np.int64)
     i_mask_list = [len(item['id2words'])*[1]+(max_words_len-len(item['id2words']))*[0] for item in batch]
-    i_mask_list = np.array(i_mask_list)
-    
+    i_mask_list = np.array(i_mask_list,dtype=np.int64)
+    re_dict["words2ids"] = id2words_list
+    re_dict["i_mask"] = i_mask_list
+    # content chars
+    max_content_c_len = max([len(item['content_chars']) for item in batch])
+    chars_list = [item['content_chars']+(max_content_c_len-len(item['content_chars']))*[0] for item in batch]
+    chars_list = np.array(chars_list,dtype=np.int64)
+    c_mask_list = [len(item['content_chars'])*[1]+(max_content_c_len-len(item['content_chars']))*[0] for item in batch]
+    c_mask_list = np.array(c_mask_list,dtype=np.int64)
+    re_dict["content_chars"] = chars_list
+    re_dict["c_mask"] = c_mask_list
+    # content words
+    max_content_w_len = max([len(item['content_words']) for item in batch])
+    words_list = [item['content_words']+(max_content_w_len-len(item['content_words']))*[0] for item in batch]
+    words_list = np.array(words_list,dtype=np.int64)
+    w_mask_list = [len(item['content_words'])*[1]+(max_content_w_len-len(item['content_words']))*[0] for item in batch]
+    w_mask_list = np.array(w_mask_list,dtype=np.int64)
+    re_dict["content_words"] = words_list
+    re_dict["w_mask"] = w_mask_list
+    # entropy mat
+    entropy_mat = [np.pad(item['entropy_mat'],[(0,max_words_len-item['entropy_mat'].shape[0]),(0,max_words_len-item['entropy_mat'].shape[1])]) if item['entropy_mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
+    entropy_mat = np.array(entropy_mat,np.float32)
+    re_dict["entropy_mat"] = entropy_mat
+    # paris mat
+    paris_mat = [np.pad(item['paris_mat'],[(0,max_words_len-item['paris_mat'].shape[0]),(0,max_words_len-item['paris_mat'].shape[1])]) if item['paris_mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
+    paris_mat = np.array(paris_mat,np.float32)
+    re_dict["paris_mat"] = paris_mat
+    # label 
     labels_list = [item['label'] for item in batch]
     labels_list = np.array(labels_list,np.int64)
-    # out = [item['mat'].shape for item in batch]
-    # print(out)
-    mat_list = [np.pad(item['mat'],[(0,max_words_len-item['mat'].shape[0]),(0,max_words_len-item['mat'].shape[1])]) if item['mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
-    mat_list = np.array(mat_list,np.float32)
-    re_dict = {
-        "chars2ids":content_list,
-        "c_mask":c_mask_list,
-        "words2ids":id2words_list,
-        "w_mask":i_mask_list,
-        "adj_mat":mat_list
-    }
-    #re_list = [content_list,c_mask_list,id2words_list,i_mask_list,mat_list]
     return re_dict,labels_list
+    
 def create_paris_graph(content,id2words,window_size):
     doc_word_id_map = {}
-    doc_nodes = list(set(content))
-    for j in range(len(doc_nodes)):
-        doc_word_id_map[doc_nodes[j]] = j
-
+    for j in range(len(id2words)):
+        doc_word_id_map[id2words[j]] = j
     # sliding windows
     windows = []
     doc_len = len(content)
@@ -167,11 +184,14 @@ def create_paris_graph(content,id2words,window_size):
                     word_pair_count[word_pair_key] += 1.
                 else:
                     word_pair_count[word_pair_key] = 1.
-    weight = np.zeros(shape=(doc_len,doc_len),dtype=np.float64)
+    weight_len = len(id2words)
+    weight = np.zeros(shape=(weight_len,weight_len),dtype=np.float64)
 
     for key in word_pair_count:
         word_p = key[0]
         word_q = key[1]
+        if word_q not in doc_word_id_map or word_p not in doc_word_id_map:
+            continue
         weight[doc_word_id_map[word_p],doc_word_id_map[word_q]] = word_pair_count[key]
     adj_mat = np.array(weight,dtype=np.float64)
     return adj_mat

@@ -1,2 +1,3 @@
-# fggnn
-The offical code for FG-GNN model
+The offical code for FG-GNN model.
+
+

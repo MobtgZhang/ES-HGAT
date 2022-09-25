@@ -25,10 +25,10 @@ def main(args):
     result_dir = os.path.join(args.result_dir,args.dataset)
     if args.dataset in ["AiChallenger2018","CLUEEmotion2020","CarsReviews","SimplifyWeibo4Moods"]:
         args.lang = "zh"
-        args.embedding_file = "D:\\Vecs\\fasttext\\cc.zh.300.vec"
+        args.embedding_file = "/media/suesai7719/新加卷/Vecs/fasttext/wiki.zh.vec"
     elif args.dataset in ["wrime-ver1","wrime-ver2"]:
         args.lang = "jp"
-        args.embedding_file = "D:\\Vecs\\fasttext\\cc.ja.300.vec"
+        args.embedding_file = "/media/suesai7719/新加卷/Vecs/fasttext/wiki.ja.vec"
     else:
         raise ValueError("Unknow language: %s"%args.lang)
     print(args.embedding_file) 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     check_args(args)
     # first, create a project logger
-    logger.setLevel(logging.INFO)  # Log等级总开关
+    logger.setLevel(logging.INFO)  # The main log level switch.
     # second, create a handler,which is used to write in files
     rq = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
     logfile = os.path.join(args.log_dir,rq + '.log')
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # third, define the format of the handler.
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
     fh.setFormatter(formatter)
-    # fourth，add the logger in handler.
+    # fourth, add the logger in handler.
     logger.addHandler(fh)
     logger.addHandler(ch)
     logger.info(str(args))
