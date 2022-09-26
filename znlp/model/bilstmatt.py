@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..layers import MutiSelfAttLayer
+from ..layers import MutiAttentionLayer
 from ..layers import MatchNetwork
 
 class BiLSTMAtt(nn.Module):
@@ -21,7 +21,7 @@ class BiLSTMAtt(nn.Module):
             self.w_embedding = nn.Embedding.from_pretrained(embedding)
         self.mask_embedding = nn.Embedding(2,self.embedding_dim)
         self.lstm = nn.LSTM(self.embedding_dim,self.hidden_dim,bidirectional=True)
-        self.att = MutiSelfAttLayer(self.hidden_dim*2,self.dim_k,self.dim_v)
+        self.att = MutiAttentionLayer(self.hidden_dim*2,self.dim_k,self.dim_v)
         if single:
             self.class_size = config.class_size
             self.pred = nn.Linear(self.dim_v,self.class_size)

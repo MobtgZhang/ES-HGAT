@@ -51,3 +51,30 @@ class MatchNetwork(nn.Module):
         return score
 
 
+class ReadoutLayer(nn.Module):
+    def __init__(self,in_dim,hid_dim,class_size,dropout=0.2):
+        super(ReadoutLayer,self).__init__()
+        self.in_dim = in_dim
+        self.hid_dim = hid_dim
+        self.dropout = dropout
+        self.act = nn.ReLU()
+        self.lin_att = nn.Linear(in_dim,hid_dim)
+        self.lin_emb = nn.Linear(in_dim,hid_dim)
+        self.lin_mlp = nn.Linear(in_dim,class_size)
+    def forward(self,x,mask):
+        # soft attention
+        att = torch.sigmoid(self.lin_att(x))
+        emb = self.act(self.lin_emb(x))    
+        # graph summation
+        g = mask * att * emb
+        N = torch.sum(mask,axis=1)
+        M = (mask-1) * 1e9
+        M_v,_ = torch.max(g + M, axis=1)
+        g = torch.sum(g, axis=1) / N + M_v
+        g = F.dropout(g,p=self.dropout)
+
+        # classification
+        output =  self.lin_mlp(g)
+        logits = F.log_softmax(output,dim=1)
+        return logits
+    

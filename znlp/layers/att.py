@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class MutiSelfAttLayer(nn.Module):
+class MutiAttentionLayer(nn.Module):
     def __init__(self,in_size,dim_k,dim_v):
-        super(MutiSelfAttLayer, self).__init__()
+        super(MutiAttentionLayer, self).__init__()
         self.in_size = in_size
         self.dim_k = dim_k
         self.dim_v = dim_v

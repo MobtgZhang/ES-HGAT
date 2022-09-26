@@ -11,16 +11,22 @@ class GraphGNN(nn.Module):
         self.dropout = dropout
         self.act = nn.ReLU()
         
+        self.encode = nn.Linear(in_dim,out_dim)
         self.z0 = nn.Linear(out_dim,out_dim)
         self.z1 = nn.Linear(out_dim,out_dim)
         self.r0 = nn.Linear(out_dim,out_dim)
         self.r1 = nn.Linear(out_dim,out_dim)
         self.h0 = nn.Linear(out_dim,out_dim)
         self.h1 = nn.Linear(out_dim,out_dim)
-    def forward(self,x,mask,adj_mat):
+    def forward(self,x,adj_mat,mask=None):
+        # dropout
+        x = F.dropout(x,p=self.dropout)
+        if mask is not None:
+            x = mask * self.act(x)
+        x = self.encode(x)
         # message passing
         a = torch.matmul(adj_mat, x)
-
+        
         # update gate        
         z0 = self.z0(a)
         z1 = self.z1(x)
@@ -31,10 +37,10 @@ class GraphGNN(nn.Module):
         r1 = self.r1(x)
         r = torch.sigmoid(r0 + r1)
 
-        # update embeddings    
+        # update embeddings     
         h0 = self.h0(a)
         h1 = self.h1(r*x)
-        h = self.act(mask*(h0 + h1))
+        h = self.act(h0 + h1)
         
         return h*z + x*(1-z)
     def __repr__(self):
@@ -88,16 +94,18 @@ class VGAE(nn.Module):
         self.base_gcn = GraphGNN(in_dim,hid_dim,dropout)
         self.gcn_mean = GraphGNN(hid_dim,out_dim,dropout)
         self.gcn_logstddev = GraphGNN(hid_dim,out_dim,dropout)
-    def encode(self, X):
-        hidden = self.base_gcn(X)
-        mean = self.gcn_mean(hidden)
-        logstd = self.gcn_logstddev(hidden)
-        gaussian_noise = torch.randn(X.size(0),self.out_dim)
+    def encode(self, x,adj_mat):
+        batch_size,seq_len = x.size(0),x.size(1)
+        device = x.device
+        hidden = self.base_gcn(x,adj_mat)
+        mean = self.gcn_mean(hidden,adj_mat)
+        logstd = self.gcn_logstddev(hidden,adj_mat)
+        gaussian_noise = torch.randn(batch_size,seq_len,self.out_dim).to(device)
         sampled_z = gaussian_noise*torch.exp(logstd) + mean
         return sampled_z
-    def forward(self, X):
-        Z = self.encode(X)
-        A_pred = torch.sigmoid(torch.matmul(Z,Z.t()))
+    def forward(self,x,adj_mat):
+        z = self.encode(x,adj_mat)
+        A_pred = torch.sigmoid(torch.matmul(z,z.transpose(2,1)))
         return A_pred
     
 class GraphConvolution(nn.Module):
