@@ -60,12 +60,13 @@ class ReadoutLayer(nn.Module):
         self.act = nn.ReLU()
         self.lin_att = nn.Linear(in_dim,hid_dim)
         self.lin_emb = nn.Linear(in_dim,hid_dim)
-        self.lin_mlp = nn.Linear(in_dim,class_size)
+        self.lin_mlp = nn.Linear(hid_dim,class_size)
     def forward(self,x,mask):
         # soft attention
         att = torch.sigmoid(self.lin_att(x))
         emb = self.act(self.lin_emb(x))    
         # graph summation
+        mask = mask.unsqueeze(2).repeat(1,1,self.hid_dim)
         g = mask * att * emb
         N = torch.sum(mask,axis=1)
         M = (mask-1) * 1e9
@@ -77,4 +78,17 @@ class ReadoutLayer(nn.Module):
         output =  self.lin_mlp(g)
         logits = F.log_softmax(output,dim=1)
         return logits
+class MatchSimpleNet(nn.Module):
+    def __init__(self,in_dim,label_size,class_size,dropout=0.2):
+        super(MatchSimpleNet,self).__init__()
+        self.dropout = dropout
+        self.linl = nn.Linear(in_dim,label_size)
+        self.linc = nn.Linear(in_dim,class_size)
+        self.gelu = nn.GELU()
+    def forward(self,inputs):
+        sl = self.gelu(self.linl(inputs)) # (b,s,l)
+        sc = self.linc(inputs).transpose(2,1) # (b,s,c)
+        rp = F.softmax(sc, 2).bmm(sl) # (b,c,s)*(b,s,l)=(b,c,l)
+        rp = F.dropout(rp, p=self.dropout, training=self.training)
+        return rp
     
