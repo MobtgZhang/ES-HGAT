@@ -101,30 +101,6 @@ def test_FGGNN():
         }
         outputs,atts = model(**inputs_dict)
         print("FGGNN: ",outputs.shape,atts.shape)
-def test_HGAT():
-    nfeat_list = [300,200,150]
-    nhid = 100
-    nclass = 4
-    dropout = 0.2
-    batch_size = 16
-    seq_len = 47
-    
-    for single in [True,False]:
-        model = HGAT(nfeat_list,nhid,nclass,dropout)
-        words2ids = torch.randint(0,config.num_words,size=(batch_size,seq_len))
-        c_mask = torch.randint(0,2,size=(batch_size,seq_len))
-        chars2ids = torch.randint(0,config.num_chars,size=(batch_size,seq_len))
-        w_mask = torch.randint(0,2,size=(batch_size,seq_len))
-        entropy_mat = torch.rand(batch_size,seq_len,seq_len)
-        inputs_dict = {
-            "chars2ids":chars2ids,
-            "c_mask":c_mask,
-            "words2ids":words2ids,
-            "w_mask":w_mask,
-            "entropy_mat":entropy_mat
-        }
-        outputs,atts = model(**inputs_dict)
-        print("FGGNN: ",outputs.shape,atts.shape)
 def test_HyperGAT():
     config = Config()
     config.num_words = 5789
@@ -240,16 +216,31 @@ def test_TextRCNN():
         }
         outputs = model(**inputs_dict)
         print("TextRCNN: ",outputs.shape)
+def test_HGAT():
+    nfeat_list = [300,300,300]
+    nhid = 300
+    nclass = 4
+    dropout = 0.2
+    batch_size = 16
+    seq_len = 47
+    
+    for single in [True,False]:
+        model = HGAT(nfeat_list,nhid,nclass,dropout)
+        inputs = torch.rand(batch_size,seq_len,nfeat_list[0])
+        adj_mat = torch.rand(batch_size,seq_len,seq_len)
+        outputs = model(inputs,adj_mat)
+        print("HGAT: ",outputs.shape)
 def main():
     test_BiLSTMAtt()
     test_CapsuleNet()
     test_CharBiLSTM()
     test_FGGNN()
-    #test_HyperGAT()
+    test_HyperGAT()
     test_TextCNN()
     test_TextGCN()
     test_Texting()
     test_TextRCNN()
+    test_HGAT()
 if __name__ == "__main__":
     main()
 

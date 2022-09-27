@@ -126,18 +126,19 @@ def test_MatchSimpleNet():
     outputs = model(inputs)
     print("MatchSimpleNet: ",outputs.shape)
 def test_HyperGraphAttentionLayerSparse():
-    in_dim = 300
+    in_dim = 200
     out_dim = 200
     dropout = 0.2
     alpha = 0.1
     transfer = True
     batch_size = 16
     seq_len = 47
-    model = HyperGraphAttentionLayerSparse(in_dim,out_dim,dropout,alpha,transfer)
-    inputs = torch.rand(batch_size,seq_len,in_dim)
-    adj_mat = torch.rand(batch_size,seq_len,seq_len)
-    outputs = model(inputs,adj_mat)
-    print("HyperGraphAttentionLayerSparse: ",outputs.shape)
+    for transfer in [False,True]:
+        model = HyperGraphAttentionLayerSparse(in_dim,out_dim,dropout,alpha,transfer)
+        inputs = torch.rand(batch_size,seq_len,in_dim)
+        adj_mat = torch.rand(batch_size,seq_len,seq_len)
+        outputs = model(inputs,adj_mat)
+        print("HyperGraphAttentionLayerSparse: ",outputs.shape)
 def main():
     test_MutiAttentionLayer()
     test_MatchNetwork()
@@ -148,8 +149,9 @@ def main():
     test_GraphConvolution()
     test_GraphGNN()
     test_VGAE()
-    test_HyperGraphAttentionLayerSparse()
     test_MatchSimpleNet()
+    test_HyperGraphAttentionLayerSparse()
+    
 if __name__ == "__main__":
     main()
 

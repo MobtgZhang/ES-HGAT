@@ -157,15 +157,17 @@ class HyperGraphAttentionLayerSparse(nn.Module):
 
 
     def forward(self, x, adj):
-        x_4att = x.matmul(self.weight2)
+        # x:(b,s,i)
+        # w:(i,o)
+        x_4att = x.matmul(self.weight2) # (b,s,o)
 
         if self.transfer:
-            x = x.matmul(self.weight)
+            x = x.matmul(self.weight) # (b,s,o)
             if self.bias is not None:
                 x = x + self.bias        
 
-        N1 = adj.shape[1] #number of edge
-        N2 = adj.shape[2] #number of node
+        N1 = adj.shape[1] #number of edge ,s
+        N2 = adj.shape[2] #number of node ,s
 
         pair = adj.nonzero().t()        
 
@@ -191,7 +193,7 @@ class HyperGraphAttentionLayerSparse(nn.Module):
         edge = torch.matmul(attention_edge, x)
         
         edge = F.dropout(edge, self.dropout, training=self.training)
-
+    
         edge_4att = edge.matmul(self.weight3)
 
         get = lambda i: edge_4att[i][adj[i].nonzero().t()[0]]

@@ -2,7 +2,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from znlp.data import to_var
+from .data import to_var
 
 class FBetaLoss(nn.Module):
     '''Calculate F1 score. Can work with gpu tensors
