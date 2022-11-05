@@ -28,26 +28,26 @@ class MatchNetwork(nn.Module):
     """
 	This model is for multilayers network.
 	"""
-    def __init__(self,doc_size, hidden_size,label_size,class_size,dropout_rate=0.2):
+    def __init__(self,doc_size, hidden_size,num_attributes,num_classes,dropout_rate=0.2):
         super(MatchNetwork, self).__init__()
         self.doc_size = doc_size
         self.hidden_size = hidden_size
-        self.label_size = label_size
-        self.class_size = class_size
+        self.label_size = num_attributes
+        self.class_size = num_classes
         self.dp = dropout_rate
 
-        self.label_lin = MultiMatch(doc_size,hidden_size,label_size)
-        self.class_lin = MultiMatch(doc_size,hidden_size,class_size)
+        self.label_lin = MultiMatch(doc_size,hidden_size,num_attributes)
+        self.class_lin = MultiMatch(doc_size,hidden_size,num_classes)
     def forward(self,x):
         """
         x: (batch_size,num_capsules,doc_size)
         outputs: (batch_size,class_size,label_size)
         """
-        f_c = self.label_lin(x) # (batch_size,label_size,hidden_size)
-        s_c = self.class_lin(x) # (batch_size,class_size,hidden_size)
+        f_c = self.label_lin(x) # (batch_size,num_attributes,hidden_size)
+        s_c = self.class_lin(x) # (batch_size,num_classes,hidden_size)
 
-        predict = s_c.bmm(f_c.transpose(2, 1)) # (batch_size,class_size,label_size)
-        score = F.log_softmax(predict,dim=1)
+        predict = f_c.bmm(s_c.transpose(2, 1)) # (batch_size,num_attributes,num_classes)
+        score = F.log_softmax(predict,dim=-1)
         return score
 
 
@@ -76,19 +76,20 @@ class ReadoutLayer(nn.Module):
 
         # classification
         output =  self.lin_mlp(g)
-        logits = F.log_softmax(output,dim=1)
-        return logits
+        logits = F.log_softmax(output,dim=-1)
+        return output
 class MatchSimpleNet(nn.Module):
-    def __init__(self,in_dim,label_size,class_size,dropout=0.2):
+    def __init__(self,in_dim,num_attributes,num_classes,dropout=0.2):
         super(MatchSimpleNet,self).__init__()
         self.dropout = dropout
-        self.linl = nn.Linear(in_dim,label_size)
-        self.linc = nn.Linear(in_dim,class_size)
+        self.linl = nn.Linear(in_dim,num_attributes)
+        self.linc = nn.Linear(in_dim,num_classes)
         self.gelu = nn.GELU()
     def forward(self,inputs):
-        sl = self.gelu(self.linl(inputs)) # (b,s,l)
-        sc = self.linc(inputs).transpose(2,1) # (b,s,c)
-        rp = F.softmax(sc, 2).bmm(sl) # (b,c,s)*(b,s,l)=(b,c,l)
+        sl = self.gelu(self.linl(inputs)) # (b,s,a)
+        sc = self.linc(inputs) # (b,s,c)
+        rp = F.softmax(sl.transpose(2,1), 2).bmm(sc) # (b,a,s)*(b,s,c)=(b,a,c)
         rp = F.dropout(rp, p=self.dropout, training=self.training)
-        return rp
+        logits = F.log_softmax(rp,dim=-1)
+        return logits
     

@@ -1,0 +1,6 @@
+num_words: 5789
+embedding_dim: 300
+n_hid: 200
+out_dim: 50
+dropout: 0.2
+pretrain_path: ./bert-base-chinese

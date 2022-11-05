@@ -10,7 +10,7 @@ from znlp.utils import build_embeddings
 from preprocess import build_graph,build_dictionary
 from csv_process import split_aichallenger2018_dataset,split_carsreviews_dataset
 from csv_process import split_wrime_dataset
-from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset
+from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset,split_nlpcc2018task1_dataset,split_toutiaonews_dataset
 logger = logging.getLogger()
 
 
@@ -23,12 +23,12 @@ def check_args(args):
 def main(args):
     data_dir = os.path.join(args.data_dir,args.dataset)
     result_dir = os.path.join(args.result_dir,args.dataset)
-    if args.dataset in ["AiChallenger2018","CLUEEmotion2020","CarsReviews","SimplifyWeibo4Moods"]:
+    if args.dataset in ["AiChallenger2018","CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1"]:
         args.lang = "zh"
-        args.embedding_file = "/media/suesai7719/新加卷/Vecs/fasttext/wiki.zh.vec"
+        args.embedding_file = "./vec/cc.zh.300.vec"
     elif args.dataset in ["wrime-ver1","wrime-ver2"]:
         args.lang = "jp"
-        args.embedding_file = "/media/suesai7719/新加卷/Vecs/fasttext/wiki.ja.vec"
+        args.embedding_file = "./vec/cc.ja.300.vec"
     else:
         raise ValueError("Unknow language: %s"%args.lang)
     print(args.embedding_file) 
@@ -45,11 +45,16 @@ def main(args):
         if len(os.listdir(result_dir))==0:
             tokenizer = JanomeTokenizer()
             split_wrime_dataset(data_dir,result_dir,tokenizer,args.dataset,args.name)
-    elif args.dataset == "CarsReviews":
-        data_dir = os.path.join(args.data_dir,"CarsReviews")
+    elif args.dataset == "TouTiaoNews":
+        data_dir = os.path.join(args.data_dir,"TouTiaoNews")
         if len(os.listdir(result_dir))==0:
             tokenizer = JiebaTokenizer()
-            split_carsreviews_dataset(data_dir,result_dir,tokenizer,args.percentage)
+            split_toutiaonews_dataset(data_dir,result_dir,tokenizer,args.percentage)
+    elif args.dataset == "NLPCC2018Task1":
+        data_dir = os.path.join(args.data_dir,"NLPCC2018Task1")
+        if len(os.listdir(result_dir))==0:
+            tokenizer = JiebaTokenizer()
+            split_nlpcc2018task1_dataset(data_dir,result_dir,tokenizer)
     elif args.dataset == "SimplifyWeibo4Moods":
         if len(os.listdir(result_dir))==0:
             tokenizer = JiebaTokenizer()
@@ -64,7 +69,7 @@ def main(args):
     if not os.path.exists(words_dict_file) or not os.path.exists(chars_dict_file) :
         build_dictionary(result_dir,words_dict_file,chars_dict_file,type_list[:-1])
     words_embedding_file = os.path.join(result_dir,"words-embedding.npy")
-    chars_embedding_file = os.path.join(result_dir,"chars-embedding.npy")
+    chars_embedding_file = os.path.join(result_dir,"chars-embedding.npy") 
     if not os.path.exists(words_embedding_file):
         data_dict = Dictionary.load(words_dict_file)
         build_embeddings(args.embedding_file,words_embedding_file,data_dict)
@@ -74,14 +79,17 @@ def main(args):
     stop_words_file = os.path.join(args.data_dir,'stopwords_%s.json'%args.lang)
     for dataset_type in type_list:
         save_graph_file = os.path.join(result_dir,'%s-graph.pkl'%dataset_type)
+        load_dataset_file = os.path.join(result_dir,"%sset.json"%dataset_type)
+        if not os.path.exists(load_dataset_file):
+            continue
         if not os.path.exists(save_graph_file):
-            build_graph(result_dir,stop_words_file,dataset_type,args.window)
+            build_graph(result_dir,stop_words_file,dataset_type,args.window) 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir',default='./data',type=str)
     parser.add_argument('--result-dir',default='./result',type=str)
     parser.add_argument('--log-dir',default='./log',type=str)
-    parser.add_argument('--dataset',default='AiChallenger2018',type=str)
+    parser.add_argument('--dataset',default='CLUEEmotion2020',type=str)
     parser.add_argument('--percentage',default=0.7,type=float)
     parser.add_argument('--name',default="Writer",type=str)
     parser.add_argument('--embedding-file',default=None,type=str)

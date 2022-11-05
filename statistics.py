@@ -25,14 +25,17 @@ def main():
         for idx,name in enumerate(tag_names):
             load_file_name = os.path.join(files_dir,"%sset.json"%name)
             tp_num = 0
-            with open(load_file_name,mode="r",encoding="utf-8") as rfp:
-                for jline in rfp:
-                    data_dict = json.loads(jline)
-                    words_number += len(data_dict["content"].split())
-                    sentence = data_dict["content"].replace(" ","")
-                    text_length += len(sentence)
-                    text_number += 1
-                    tp_num += 1
+            if not os.path.exists(load_file_name):
+                pass
+            else:
+                with open(load_file_name,mode="r",encoding="utf-8") as rfp:
+                    for jline in rfp:
+                        data_dict = json.loads(jline)
+                        words_number += len(data_dict["content"].split())
+                        sentence = data_dict["content"].replace(" ","")
+                        text_length += len(sentence)
+                        text_number += 1
+                        tp_num += 1
             tag_numbers[idx] = tp_num
         text_length = round(text_length/text_number,2)
         tag_numbers = [round(item/text_number,2) for item in tag_numbers]

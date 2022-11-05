@@ -21,6 +21,8 @@ def to_var(object_value,device):
         for idx in range(len(object_value)):
             re_list.append(to_var(object_value[idx],device))
         object_value = re_list
+    elif type(object_value) is str:
+        return object_value
     else:
         object_value = torch.from_numpy(object_value).to(device)
     return object_value
@@ -81,8 +83,9 @@ class Dictionary:
         return '{}(num_keys={})'.format(
             self.__class__.__name__,len(self.token2ind))
 class ContentReviewDataset(Dataset):
-    def __init__(self,load_file_name,words_dict,chars_dict,max_limit_len=512):
+    def __init__(self,load_file_name,words_dict,chars_dict,max_limit_len=512,tokenizer=None):
         super(ContentReviewDataset,self).__init__()
+        self.tokenizer = tokenizer
         with open(load_file_name,mode="rb") as rfp:
             self.dataset = pickle.load(rfp)
         self.words_dict = words_dict
@@ -96,6 +99,7 @@ class ContentReviewDataset(Dataset):
         re_val['content_words'] = content_words
         id2words = [self.words_dict[w] for w in self.dataset[idx]['id2words']]
         re_val['id2words'] = id2words
+        re_val['content'] = self.dataset[idx]['content'].replace(" ","")
         return re_val
     def __len__(self,):
         return len(self.dataset)
@@ -109,6 +113,7 @@ def batchfy(batch):
         content_chars,c_mask
         content_words,w_mask
         entropy_mat,paris_mat
+        list:
         labels_list
     """
     re_dict = {}
@@ -145,6 +150,9 @@ def batchfy(batch):
     paris_mat = [np.pad(item['paris_mat'],[(0,max_words_len-item['paris_mat'].shape[0]),(0,max_words_len-item['paris_mat'].shape[1])]) if item['paris_mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
     paris_mat = np.array(paris_mat,np.float32)
     re_dict["paris_mat"] = paris_mat
+    # content
+    content_list = [item['content'] for item in batch]
+    re_dict["content"] = content_list
     # label 
     labels_list = [item['label'] for item in batch]
     labels_list = np.array(labels_list,np.int64)
@@ -251,7 +259,6 @@ class Timer(object):
             self.running = False
             self.total += time.time() - self.start
         return self
-
     def time(self):
         if self.running:
             return self.total + time.time() - self.start
@@ -259,13 +266,14 @@ class Timer(object):
 class DataSaver(object):
     """save every epoch datas."""
     def __init__(self,save_file_name):
-        names = ["f1_score","em_score","loss"]
+        names = ["f1_score","em_score","loss","time"]
         self.value_list = pd.DataFrame(columns=names)
         self.save_file_name = save_file_name
-    def add_values(self,f1_score,em_score,loss):
+    def add_values(self,f1_score,em_score,loss,time):
         data = {"f1_score":f1_score,
                 "em_score":em_score,
-                "loss":loss}
+                "loss":loss,
+                "time":time}
         idx = len(self.value_list)
         self.value_list.loc[idx] = data
         self.value_list.to_csv(self.save_file_name,index=None)

@@ -13,12 +13,13 @@ from znlp.data import Dictionary, to_var
 from znlp.data import ContentReviewDataset,batchfy
 from znlp.data import Timer,DataSaver
 from znlp.eval import evaluate
+from znlp.loss import MultipleLoss
 
 logger = logging.getLogger()
 from config import get_models,check_args,get_args
   
 def main(args):
-    device = torch.device("cpu" if not args.cuda and torch.cuda.is_available() else "cuda:0")
+    device = torch.device("cpu" if not args.cuda and torch.cuda.is_available() else "cuda:%d"%args.device_id)
     # preparing the dataset
     words_dict_file_name = os.path.join(args.result_dir,args.dataset,"words-dict.json")
     words_dict = Dictionary.load(words_dict_file_name)
@@ -32,12 +33,16 @@ def main(args):
     train_loader = DataLoader(train_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
     valid_dataset = ContentReviewDataset(load_valid_dataset_file,words_dict,chars_dict)
     valid_loader = DataLoader(valid_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
-    test_dataset = ContentReviewDataset(load_test_dataset_file,words_dict,chars_dict)
-    test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
+    if os.path.exists(load_test_dataset_file):
+        test_dataset = ContentReviewDataset(load_test_dataset_file,words_dict,chars_dict)
+        test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
+    else:
+        test_dataset = None
+        test_loader = None
     # preparing the model
     model = get_models(args)
     model.to(device)
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = MultipleLoss()
     if args.optim == "AdamW":
         optimizer = optim.AdamW(model.parameters(),lr=args.learning_rate)
     elif args.optim == "Adam":
@@ -46,42 +51,54 @@ def main(args):
         optimizer = optim.SGD(model.parameters(),lr=args.learning_rate)
     else:
         raise ValueError("unknow optimizer %s"%str(args.optim))
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer,milestones=[10,20,30,40], gamma=args.gamma)
-    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=args.gamma)
+    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer,milestones=[10,20,30,40], gamma=args.gamma)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=args.gamma)
     # save result
     model_dir = os.path.join(args.log_dir,args.dataset,args.model_name)
     save_model_file = os.path.join(model_dir,args.time_step + "-train.csv")
     train_saver = DataSaver(save_model_file)
+    train_timer = Timer()
     save_model_file = os.path.join(model_dir,args.time_step + "-valid.csv")
     valid_saver = DataSaver(save_model_file)
+    valid_timer = Timer()
     save_model_file = os.path.join(model_dir,args.time_step + "-test.csv")
     test_saver = DataSaver(save_model_file)
+    test_timer = Timer()
     best_em = 0.0
     for epoch in range(args.epoches):
         model.train()
         time_bar = tqdm(enumerate(train_loader),total=len(train_loader),leave = True)
+        train_timer.reset()
         for idx,item in time_bar:
             item = to_var(item,device)
             optimizer.zero_grad()
-            re_list,targets = item
-            predicts = model(**re_list)
+            re_dict,targets = item
+            predicts = model(**re_dict)
             loss = loss_fn(predicts,targets)
             loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
             optimizer.step()
             time_bar.set_description("epoch %d"%epoch)  # the information bar for the left     
             time_bar.set_postfix(loss="%0.4f"%loss.item(),learning_rate="%0.4e"%(optimizer.param_groups[0]['lr']))  # the information bar for the right
+        train_t = train_timer.time()
         if (epoch+1)%args.optim_step == 0:
             scheduler.step()
         train_loss,train_f1val,train_emval = evaluate(train_loader,model,loss_fn,device,"trainset test")
-        train_saver.add_values(train_f1val,train_emval,train_loss)
+        train_saver.add_values(train_f1val,train_emval,train_loss,train_t)
+        valid_timer.reset()
         valid_loss,valid_f1val,valid_emval = evaluate(valid_loader,model,loss_fn,device,"validset test")
-        valid_saver.add_values(valid_f1val,valid_emval,valid_loss)
-        test_loss,test_f1val,test_emval = evaluate(test_loader,model,loss_fn,device,"testset test")
-        test_saver.add_values(test_f1val,test_emval,test_loss)
-        logger.info("train loss:%0.4f,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%(train_loss,valid_loss,valid_f1val,valid_emval))
+        valid_t = valid_timer.time()
+        valid_saver.add_values(valid_f1val,valid_emval,valid_loss,valid_t)
+        if test_loader is not None:
+            test_timer.reset()
+            test_loss,test_f1val,test_emval = evaluate(test_loader,model,loss_fn,device,"testset test")
+            test_t = test_timer.time()
+            test_saver.add_values(test_f1val,test_emval,test_loss,test_t)
+        logger.info("epoch:%d,train loss:%0.4f,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%
+                        (epoch,train_loss,valid_loss,valid_f1val,valid_emval))
         # save the best model
-        if best_em<test_emval:
-            best_em = test_emval
+        if best_em<valid_emval:
+            best_em = valid_emval
             save_model_file = os.path.join(model_dir,args.time_step + ".pth")
             torch.save(model.state_dict(), save_model_file)
 if __name__ == "__main__":

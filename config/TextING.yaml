@@ -1,0 +1,8 @@
+num_words: 5789
+embedding_dim: 300
+num_layers: 3
+dropout: 0.2
+hidden_dim: 200
+out_dim: 50
+
+

@@ -1,0 +1,7 @@
+pretrain_path: ./chinese-xlnet-base # hfl/chinese-xlnet-base
+num_words: 5789
+embedding_dim: 300
+dropout: 0.2
+nhid_dim: 200
+ohid_dim: 100
+

@@ -1,0 +1,5 @@
+num_words: 5789
+embedding_dim: 300
+nhid_dim: 200
+ohid_dim: 100
+

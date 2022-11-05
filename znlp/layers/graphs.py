@@ -91,17 +91,20 @@ class VGAE(nn.Module):
         self.out_dim = out_dim
         self.dropout = dropout
         
-        self.base_gcn = GraphGNN(in_dim,hid_dim,dropout)
-        self.gcn_mean = GraphGNN(hid_dim,out_dim,dropout)
-        self.gcn_logstddev = GraphGNN(hid_dim,out_dim,dropout)
+        self.base_gcn = GraphConvolution(in_dim,hid_dim,self.dropout)
+        self.gcn_mean = GraphGNN(hid_dim,out_dim,self.dropout)
+        self.gcn_logstddev = GraphGNN(hid_dim,out_dim,self.dropout)
+        self.gelu = nn.GELU()
     def encode(self, x,adj_mat):
         batch_size,seq_len = x.size(0),x.size(1)
         device = x.device
-        hidden = self.base_gcn(x,adj_mat)
-        mean = self.gcn_mean(hidden,adj_mat)
-        logstd = self.gcn_logstddev(hidden,adj_mat)
+        hidden = self.gelu(self.base_gcn(x,adj_mat))
+        mean = torch.tanh(self.gcn_mean(hidden,adj_mat))
+        logstd = torch.tanh(self.gcn_logstddev(hidden,adj_mat))
         gaussian_noise = torch.randn(batch_size,seq_len,self.out_dim).to(device)
+        # sampled_z = gaussian_noise*(1+logstd) + mean
         sampled_z = gaussian_noise*torch.exp(logstd) + mean
+        # print(sampled_z)
         return sampled_z
     def forward(self,x,adj_mat):
         z = self.encode(x,adj_mat)

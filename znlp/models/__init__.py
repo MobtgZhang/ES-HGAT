@@ -1,11 +1,8 @@
-from .bilstmatt import BiLSTMAtt
-from .capsulenet import CapsuleNet
-from .charlstm import CharBiLSTM
-from .fggnn import FGGNN
-from .hgat import HGAT
-from .hypergat import HyperGAT
-from .textcnn import TextCNN
-from .textgcn import TextGCN
+from .capsulenet import CapsuleNetWords,CapsuleNetChars,PrtrainCapsModel
+from .fggnn import FGGNN,GraphFGGNN,FGGNNWord2Vec
+from .hypergat import HyperGAT,PtrainGATModel
+from .textcnn import TextCNNWords,TextCNNChars,PretrainCNNModel
+from .textgcn import TextGCN,PretrainGCNModel
 from .texting import TextING
 from .textrcnn import TextRCNN
-
+from .transformer import PretrainingModel
