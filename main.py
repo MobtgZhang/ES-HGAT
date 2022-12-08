@@ -32,10 +32,10 @@ def main(args):
     train_dataset = ContentReviewDataset(load_train_dataset_file,words_dict,chars_dict)
     train_loader = DataLoader(train_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
     valid_dataset = ContentReviewDataset(load_valid_dataset_file,words_dict,chars_dict)
-    valid_loader = DataLoader(valid_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
+    valid_loader = DataLoader(valid_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
     if os.path.exists(load_test_dataset_file):
         test_dataset = ContentReviewDataset(load_test_dataset_file,words_dict,chars_dict)
-        test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
+        test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
     else:
         test_dataset = None
         test_loader = None
@@ -55,8 +55,9 @@ def main(args):
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=args.gamma)
     # save result
     model_dir = os.path.join(args.log_dir,args.dataset,args.model_name)
-    save_model_file = os.path.join(model_dir,args.time_step + "-train.csv")
-    train_saver = DataSaver(save_model_file)
+    if args.train_evaluate:
+        save_model_file = os.path.join(model_dir,args.time_step + "-train.csv")
+        train_saver = DataSaver(save_model_file)
     train_timer = Timer()
     save_model_file = os.path.join(model_dir,args.time_step + "-valid.csv")
     valid_saver = DataSaver(save_model_file)
@@ -83,10 +84,11 @@ def main(args):
         train_t = train_timer.time()
         if (epoch+1)%args.optim_step == 0:
             scheduler.step()
-        train_loss,train_f1val,train_emval = evaluate(train_loader,model,loss_fn,device,"trainset test")
-        train_saver.add_values(train_f1val,train_emval,train_loss,train_t)
+        if args.train_evaluate:
+            train_loss,train_f1val,train_emval = evaluate(train_loader,model,loss_fn,device,"trainset test")
+            train_saver.add_values(train_f1val,train_emval,train_loss,train_t)
         valid_timer.reset()
-        valid_loss,valid_f1val,valid_emval = evaluate(valid_loader,model,loss_fn,device,"validset test")
+        valid_loss,valid_f1val,valid_emval = evaluate(valid_loader,model,loss_fn,device,"validset test",args.save_attention_file)
         valid_t = valid_timer.time()
         valid_saver.add_values(valid_f1val,valid_emval,valid_loss,valid_t)
         if test_loader is not None:
@@ -94,8 +96,12 @@ def main(args):
             test_loss,test_f1val,test_emval = evaluate(test_loader,model,loss_fn,device,"testset test")
             test_t = test_timer.time()
             test_saver.add_values(test_f1val,test_emval,test_loss,test_t)
-        logger.info("epoch:%d,train loss:%0.4f,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%
+        if args.train_evaluate:
+            logger.info("epoch:%d,train loss:%0.4f,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%
                         (epoch,train_loss,valid_loss,valid_f1val,valid_emval))
+        else:
+            logger.info("epoch:%d,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%
+                        (epoch,valid_loss,valid_f1val,valid_emval))
         # save the best model
         if best_em<valid_emval:
             best_em = valid_emval
@@ -110,6 +116,8 @@ if __name__ == "__main__":
     rq = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
     args.time_step = rq
     model_dir = os.path.join(args.log_dir,args.dataset,args.model_name)
+    if args.save_attention:
+        args.save_attention_file = os.path.join(model_dir,rq + '.npz')
     logfile = os.path.join(model_dir,rq + '.log')
     fh = logging.FileHandler(logfile, mode='w')
     fh.setLevel(logging.DEBUG)  # The switch of the output files for different log levels.

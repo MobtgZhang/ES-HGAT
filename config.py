@@ -84,15 +84,15 @@ def get_models(args):
         "TextGCNXlNet":PretrainGCNModel,
         "TextGCNAlBert":PretrainGCNModel,
         "TextGCNRoberta":PretrainGCNModel,
-        "FGGNN-Bert":FGGNN, #
-        "FGGNN-XLNet":FGGNN, #
-        "FGGNN-AlBert":FGGNN, #
-        "FGGNN-Roberta":FGGNN, #
-        "FGGNN1":FGGNN,
-        "FGGNN2":FGGNN,
-        "FGGNN4":FGGNN,
-        "FGGNN5":FGGNN,
-        "GraphFGGNN":GraphFGGNN,
+        "ESHGCN-Bert":ESHGCN, #
+        "ESHGCN-XLNet":ESHGCN, #
+        "ESHGCN-AlBert":ESHGCN, #
+        "ESHGCN-Roberta":ESHGCN, #
+        "ESHGCN1":ESHGCN,
+        "ESHGCN2":ESHGCN,
+        "ESHGCN4":ESHGCN,
+        "ESHGCN5":ESHGCN,
+        "GraphESHGCN":GraphESHGCN,
         "Bert":PretrainingModel, #
         "XLNet":PretrainingModel, #
         "AlBert":PretrainingModel, #
@@ -128,6 +128,7 @@ def get_models(args):
 def check_args(args):
     result_dir = os.path.join(args.result_dir,args.dataset)
     model_dir = os.path.join(args.log_dir,args.dataset,args.model_name)
+    
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     assert os.path.exists(result_dir)
@@ -145,12 +146,13 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir',default='./data',type=str)
     parser.add_argument('--log-dir',default='./log',type=str)
+    parser.add_argument('--save-attention',action='store_true')
     parser.add_argument('--config-dir',default='./config',type=str)
     parser.add_argument('--config-file',default=None,type=str)
     parser.add_argument('--optim',default="AdamW",type=str)
     parser.add_argument('--optim-step',default=1,type=int)
     parser.add_argument('--result-dir',default='./result',type=str)
-    parser.add_argument('--model-name',default='FGGNN',type=str)
+    parser.add_argument('--model-name',default='ESHGCN',type=str)
     parser.add_argument('--epoches',default=40,type=int)
     parser.add_argument('--checkpoint-file',default=None,type=str)
     parser.add_argument('--batch-size',default=40,type=int)
@@ -159,6 +161,7 @@ def get_args():
     parser.add_argument('--gamma',default=0.85,type=float)
     parser.add_argument('--cuda',action='store_false')
     parser.add_argument('--random',action='store_true')
+    parser.add_argument('--train-evaluate',action='store_true')
     parser.add_argument('--device-id',type=int,default=0)
     args = parser.parse_args()
     return args  
