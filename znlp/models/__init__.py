@@ -1,5 +1,5 @@
 from .capsulenet import CapsuleNetWords,CapsuleNetChars,PrtrainCapsModel
-from .fggnn import FGGNN,GraphFGGNN,FGGNNWord2Vec
+from .eshgcn import ESHGCN,GraphESHGCN,ESHGCNWord2Vec
 from .hypergat import HyperGAT,PtrainGATModel
 from .textcnn import TextCNNWords,TextCNNChars,PretrainCNNModel
 from .textgcn import TextGCN,PretrainGCNModel

@@ -73,6 +73,8 @@ class CapsuleNetWords(nn.Module):
         'words2ids', 'i_mask', 'content_chars', 'c_mask', 'content_words', 'w_mask', 'entropy_mat', 'paris_mat'
         """
         w_emb = self.w_embedding(content_words)
+        #w_mask = self.mask_embedding(w_mask)
+        #w_hid = w_emb*torch.sigmoid(w_mask)
         w_hid = self.caps(w_emb)
         if self.single:
             logits = self.pred(w_hid.sum(dim=1))

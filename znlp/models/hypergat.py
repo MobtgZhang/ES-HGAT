@@ -93,10 +93,8 @@ class PtrainGATModel(nn.Module):
         self.dropout = config.dropout
         self.single = config.single
         self.graph = HyperGraphAttentionLayerSparse(self.w_embedding_dim,self.w_embedding_dim,self.dropout,alpha=0.1,transfer=True)
-        self.lin = nn.Linear(self.w_embedding_dim,self.hid_dim)
-        self.gelu = nn.GELU()
         # funsion layer
-        self.att = MutiAttentionLayer(self.hid_dim,self.hid_dim,self.hid_dim)
+        self.att = MutiAttentionLayer(self.w_embedding_dim,self.hid_dim,self.hid_dim)
         self.sfu = SFU(self.hid_dim,self.hid_dim)
         self.encode = nn.Sequential(
             nn.Linear(self.pretrain.config.hidden_size,self.hid_dim),
@@ -104,11 +102,11 @@ class PtrainGATModel(nn.Module):
         )
         if self.single:
             self.class_size = config.class_size
-            self.pred = nn.Linear(self.hid_dim,self.class_size)
+            self.pred = nn.Linear(self.out_dim,self.class_size)
         else:
             self.class_size = config.class_size
             self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size)
+            self.pred = MatchSimpleNet(self.out_dim,self.label_size,self.class_size)
     def forward(self,content,words2ids,i_mask,paris_mat,**kwargs):
         dcaps_hid,_ = self.get_features(content,words2ids,i_mask,paris_mat)
         # output layer
@@ -131,8 +129,7 @@ class PtrainGATModel(nn.Module):
         w_mask_emb = self.w_mask_embedding(i_mask)
         gw_hid = w_emb*torch.sigmoid(w_mask_emb)
         gw_hid = self.graph(gw_hid,paris_mat)
-        # fusion 
-        gw_hid = self.gelu(self.lin(gw_hid))
+        # fusion layer
         datt_hid,datts = self.att(dc_hid,gw_hid)
         dsfu_hid = self.sfu(datt_hid,dc_hid)
         return dsfu_hid,datts
