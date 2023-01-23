@@ -135,7 +135,7 @@ def get_args():
     parser.add_argument('--model-name',default='ESHGCN',type=str)
     parser.add_argument('--epoches',default=40,type=int)
     parser.add_argument('--checkpoint-file',default=None,type=str)
-    parser.add_argument('--batch-size',default=40,type=int)
+    parser.add_argument('--batch-size',default=12,type=int)
     parser.add_argument('--dataset',default='CLUEEmotion2020',type=str)
     parser.add_argument('--learning-rate',default=2e-3,type=float)
     parser.add_argument('--gamma',default=0.85,type=float)
