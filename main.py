@@ -42,7 +42,7 @@ def main(args):
     # preparing the model
     model = get_models(args)
     model.to(device)
-    loss_fn = MultipleLoss()
+    loss_fn = nn.CrossEntropyLoss()
     if args.optim == "AdamW":
         optimizer = optim.AdamW(model.parameters(),lr=args.learning_rate)
     elif args.optim == "Adam":

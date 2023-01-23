@@ -7,6 +7,7 @@ import torch
 from znlp.models import *
 from znlp.data import Dictionary
 from znlp.models.textcnn import TextCNNWords
+
 class Config:
     def __init__(self,load_file_name=None):
         self.get_yaml_file(load_file_name)
@@ -24,21 +25,11 @@ class Config:
             delattr(self,name)
 def get_config(args,config = None):
     config = config or Config(args.config_file)
-    if args.dataset == "AiChallenger2018":
-        config.add_attr("single",False)
-        config.add_attr("label_size",20)
-        config.add_attr("class_size",4)
-        args.lang = 'zh'
-    elif args.dataset in ["wrime-ver1","wrime-ver2"]:
+    if args.dataset in ["wrime-ver1","wrime-ver2"]:
         config.add_attr("single",False)
         config.add_attr("label_size",8)
         config.add_attr("class_size",4)
         args.lang = 'jp'
-    elif args.dataset == "CarsReviews":
-        config.add_attr("single",False)
-        config.add_attr("label_size",10)
-        config.add_attr("class_size",4)
-        args.lang = 'zh'
     elif args.dataset == "CLUEEmotion2020":
         config.add_attr("single",True)
         config.add_attr("class_size",7)
