@@ -5,4 +5,4 @@ from .cnn import MultiCNNLayer
 from .graphs import GraphConvolution,GraphGNN,VGAE,HyperGraphAttentionLayerSparse
 from .sfu import SFU
 from .dpcnn import DPCNN
-
+from .graphs import HyperGraphAttentionLayerSparse

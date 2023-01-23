@@ -159,7 +159,7 @@ class FGGNN(nn.Module):
             self.class_size = config.class_size
             self.label_size = config.label_size
             self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size)
-    def get_features(self,content,words2ids,i_mask,entropy_mat):
+    def get_features(self,content,words2ids,i_mask,entropy_mat,**kwargs):
         # chars embedding and encoding
         device = next(self.parameters()).device
         outputs = self.tokenizer(content,return_tensors="pt",padding=True,truncation=True)
@@ -176,13 +176,13 @@ class FGGNN(nn.Module):
             gw_hid = self.graph_list[k](gw_hid,A_hid)
         # fusion layer
         datt_hid,datts = self.att(dc_hid,gw_hid)
-        dsfu_hid = self.sfu(datt_hid,dc_hid)
-        return dsfu_hid,datts
+        # dsfu_hid = self.sfu(datt_hid,dc_hid)
+        return datt_hid,datts
     def forward(self,content,words2ids,i_mask,entropy_mat,**kwargs):
         """
         'words2ids', 'i_mask', 'content_chars', 'c_mask', 'content_words', 'w_mask', 'entropy_mat', 'paris_mat'
         """
-        dcaps_hid,_ = self.get_features(content,words2ids,i_mask,entropy_mat)
+        dcaps_hid,_ = self.get_features(content,words2ids,i_mask,entropy_mat,**kwargs)
         # output layer
         if self.single:
             output = self.pred(dcaps_hid.sum(dim=1))

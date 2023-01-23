@@ -84,15 +84,15 @@ def get_models(args):
         "TextGCNXlNet":PretrainGCNModel,
         "TextGCNAlBert":PretrainGCNModel,
         "TextGCNRoberta":PretrainGCNModel,
-        "ESHGCN-Bert":ESHGCN, #
-        "ESHGCN-XLNet":ESHGCN, #
-        "ESHGCN-AlBert":ESHGCN, #
-        "ESHGCN-Roberta":ESHGCN, #
-        "ESHGCN1":ESHGCN,
-        "ESHGCN2":ESHGCN,
-        "ESHGCN4":ESHGCN,
-        "ESHGCN5":ESHGCN,
-        "GraphESHGCN":GraphESHGCN,
+        "FGGNN-Bert":FGGNN, #
+        "FGGNN-XLNet":FGGNN, #
+        "FGGNN-AlBert":FGGNN, #
+        "FGGNN-Roberta":FGGNN, #
+        "FGGNN1":FGGNN,
+        "FGGNN2":FGGNN,
+        "FGGNN4":FGGNN,
+        "FGGNN5":FGGNN,
+        "GraphFGGNN":GraphFGGNN,
         "Bert":PretrainingModel, #
         "XLNet":PretrainingModel, #
         "AlBert":PretrainingModel, #
@@ -152,7 +152,7 @@ def get_args():
     parser.add_argument('--optim',default="AdamW",type=str)
     parser.add_argument('--optim-step',default=1,type=int)
     parser.add_argument('--result-dir',default='./result',type=str)
-    parser.add_argument('--model-name',default='ESHGCN',type=str)
+    parser.add_argument('--model-name',default='FGGNN',type=str)
     parser.add_argument('--epoches',default=40,type=int)
     parser.add_argument('--checkpoint-file',default=None,type=str)
     parser.add_argument('--batch-size',default=40,type=int)

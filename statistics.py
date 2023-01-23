@@ -1,6 +1,8 @@
 import json
 import os
+from pydoc import ispath
 import pandas as pd
+import matplotlib.pyplot as plt
 def main():
     root_dir = "./result"
     # # texts avg. length # classes # train (ratio) # words
