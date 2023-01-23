@@ -235,7 +235,7 @@ def create_entropy_graph(content,id2words,window):
         for qw in id2words:
             tmp_list.append(words2freq[pw]*math.log(1.0+words2freq[pw]/words2freq[qw]))
         mat.append(tmp_list)
-    mat = np.array(mat,dtype=np.float)
+    mat = np.array(mat,dtype=np.float64)
     return mat
 
 class Timer(object):
