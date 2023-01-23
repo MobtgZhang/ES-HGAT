@@ -5,10 +5,9 @@ import os
 
 
 from znlp.data import Dictionary
-from znlp.tools import JiebaTokenizer,JanomeTokenizer
+from znlp.tools import JiebaTokenizer
 from znlp.utils import build_embeddings
 from preprocess import build_graph,build_dictionary
-from csv_process import split_wrime_dataset
 from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset,\
         split_nlpcc2018task1_dataset,split_toutiaonews_dataset,split_industrial_dataset
 logger = logging.getLogger()
@@ -20,27 +19,16 @@ def check_args(args):
         os.makedirs(result_dir)
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)
+    args.embedding_file = "./vec/cc.zh.300.vec"
+    args.lang = "zh"
 def main(args):
     data_dir = os.path.join(args.data_dir,args.dataset)
     result_dir = os.path.join(args.result_dir,args.dataset)
-    if args.dataset in ["CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1","IndustryData"]:
-        args.lang = "zh"
-        args.embedding_file = "./vec/cc.zh.300.vec"
-    elif args.dataset in ["wrime-ver1","wrime-ver2"]:
-        args.lang = "jp"
-        args.embedding_file = "./vec/cc.ja.300.vec"
-    else:
-        raise ValueError("Unknow language: %s"%args.lang)
-    print(args.embedding_file)
+    assert args.dataset in ["CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1","IndustryData"]
     if args.dataset == "CLUEEmotion2020":
         if len(os.listdir(result_dir))==0:
             tokenizer = JiebaTokenizer()
             split_clueemotion2020_dataset(data_dir,result_dir,tokenizer)
-    elif args.dataset in ["wrime-ver1","wrime-ver2"]:
-        data_dir = os.path.join(args.data_dir,"wrime")
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JanomeTokenizer()
-            split_wrime_dataset(data_dir,result_dir,tokenizer,args.dataset,args.name)
     elif args.dataset == "TouTiaoNews":
         data_dir = os.path.join(args.data_dir,"TouTiaoNews")
         if len(os.listdir(result_dir))==0:
@@ -91,7 +79,6 @@ if __name__ == "__main__":
     parser.add_argument('--log-dir',default='./log',type=str)
     parser.add_argument('--dataset',default='CLUEEmotion2020',type=str)
     parser.add_argument('--percentage',default=0.7,type=float)
-    parser.add_argument('--name',default="Writer",type=str)
     parser.add_argument('--embedding-file',default=None,type=str)
     parser.add_argument('--window',default=4,type=int)
     args = parser.parse_args()

@@ -35,14 +35,8 @@ class PretrainingModel(nn.Module):
         self.hid_dim = self.pretrain.config.hidden_size
         self.single = config.single
         # output layer
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.hid_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            
-            self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size) 
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.hid_dim,self.class_size)
     def forward(self,content,**kwargs):
         device = next(self.parameters()).device
         outputs = self.tokenizer(content,return_tensors="pt",padding=True,truncation=True)
@@ -50,9 +44,6 @@ class PretrainingModel(nn.Module):
         pooled_out = self.pretrain(**outputs)
         pooled_out = pooled_out['last_hidden_state']
         # output layer
-        if self.single:
-            output = self.pred(pooled_out.sum(dim=1))
-            logits = F.log_softmax(output,dim=-1)
-        else:
-            logits = self.pred(pooled_out)
+        output = self.pred(pooled_out.sum(dim=1))
+        logits = F.log_softmax(output,dim=-1)
         return logits

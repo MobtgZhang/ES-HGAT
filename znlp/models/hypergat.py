@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..layers import HyperGraphAttentionLayerSparse
-from ..layers import MatchSimpleNet
 from ..layers import SFU,MutiAttentionLayer
 
 from transformers import XLNetModel,XLNetTokenizer
@@ -29,7 +28,6 @@ class HGNN_ATT(nn.Module):
 class HyperGAT(nn.Module):
     def __init__(self,config,w_embedding=None,**kwargs):
         super(HyperGAT,self).__init__()
-        self.single = config.single
         self.dropout = config.dropout
         self.n_hid = config.n_hid
         if w_embedding is None:
@@ -40,13 +38,8 @@ class HyperGAT(nn.Module):
             self.num_words,self.embedding_dim = w_embedding.shape
             self.w_embedding = nn.Embedding.from_pretrained(w_embedding)
         self.gat = HGNN_ATT(self.embedding_dim,self.n_hid,self.dropout)
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.n_hid,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.n_hid,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.n_hid,self.class_size)
     def forward(self,words2ids,paris_mat,**kwargs):
         """
         'words2ids', 'i_mask', 'content_chars', 'c_mask', 'content_words', 'w_mask', 'entropy_mat', 'paris_mat'
@@ -54,11 +47,8 @@ class HyperGAT(nn.Module):
         w_emb = self.w_embedding(words2ids)
         gat_hid = self.gat(w_emb,paris_mat)
         
-        if self.single:
-            logits = self.pred(gat_hid.sum(dim=1))
-            logits = F.log_softmax(logits,dim=1)
-        else:
-            logits = self.pred(gat_hid)
+        logits = self.pred(gat_hid.sum(dim=1))
+        logits = F.log_softmax(logits,dim=1)
         return logits
 
 class PtrainGATModel(nn.Module):
@@ -91,7 +81,7 @@ class PtrainGATModel(nn.Module):
         self.hid_dim = config.n_hid
         self.out_dim = config.out_dim
         self.dropout = config.dropout
-        self.single = config.single
+        
         self.graph = HyperGraphAttentionLayerSparse(self.w_embedding_dim,self.w_embedding_dim,self.dropout,alpha=0.1,transfer=True)
         # funsion layer
         self.att = MutiAttentionLayer(self.w_embedding_dim,self.hid_dim,self.hid_dim)
@@ -100,21 +90,13 @@ class PtrainGATModel(nn.Module):
             nn.Linear(self.pretrain.config.hidden_size,self.hid_dim),
             nn.GELU()
         )
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.out_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.out_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.out_dim,self.class_size)
     def forward(self,content,words2ids,i_mask,paris_mat,**kwargs):
         dcaps_hid,_ = self.get_features(content,words2ids,i_mask,paris_mat)
         # output layer
-        if self.single:
-            output = self.pred(dcaps_hid.sum(dim=1))
-            logits = F.log_softmax(output,dim=-1)
-        else:
-            logits = self.pred(dcaps_hid)
+        output = self.pred(dcaps_hid.sum(dim=1))
+        logits = F.log_softmax(output,dim=-1)
         return logits
     def get_features(self,content,words2ids,i_mask,paris_mat):
         # chars embedding and encoding
@@ -133,4 +115,3 @@ class PtrainGATModel(nn.Module):
         datt_hid,datts = self.att(dc_hid,gw_hid)
         dsfu_hid = self.sfu(datt_hid,dc_hid)
         return dsfu_hid,datts
-

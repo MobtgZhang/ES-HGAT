@@ -7,7 +7,6 @@ from ..layers import MatchSimpleNet
 class TextRCNN(nn.Module):
     def __init__(self,config,c_embedding=None,**kwargs):
         super(TextRCNN,self).__init__()
-        self.single = config.single
         self.num_layers = config.num_layers
         self.r_dropout = config.r_dropout
         self.hidden_dim = config.hidden_dim
@@ -21,13 +20,8 @@ class TextRCNN(nn.Module):
         self.mask_embedding = nn.Embedding(2,self.embedding_dim)
         self.lstm = nn.LSTM(self.embedding_dim,self.hidden_dim,self.num_layers,bidirectional=True,
                             batch_first=True,dropout=self.r_dropout)
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.hidden_dim*2+self.embedding_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.hidden_dim*2+self.embedding_dim,self.label_size,self.class_size,self.r_dropout)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.hidden_dim*2+self.embedding_dim,self.class_size)
         self.gelu = nn.GELU()
     def forward(self,content_chars,c_mask,**kwargs):
         """
@@ -39,9 +33,6 @@ class TextRCNN(nn.Module):
         c_hid, _ = self.lstm(c_emb_mask)
         c_hid = torch.cat((c_emb_mask, c_hid), 2)
         c_hid = self.gelu(c_hid)
-        if self.single:
-            logits = self.pred(c_hid.sum(dim=1))
-            logits = F.log_softmax(logits,dim=1)
-        else:
-            logits = self.pred(c_hid)
+        logits = self.pred(c_hid.sum(dim=1))
+        logits = F.log_softmax(logits,dim=1)
         return logits

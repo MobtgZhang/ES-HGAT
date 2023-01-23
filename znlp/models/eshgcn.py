@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from ..layers import VGAE, GraphConvolution,HyperGraphAttentionLayerSparse
 from ..layers import SFU
 from ..layers import MutiAttentionLayer
-from ..layers import MatchNetwork,MatchSimpleNet
 
 from transformers import XLNetModel,XLNetTokenizer
 from transformers import BertModel,BertTokenizer
@@ -15,7 +14,6 @@ from transformers import AlbertModel,AlbertTokenizer
 class ESHGCNWord2Vec(nn.Module):
     def __init__(self,config,w_embedding=None,c_embedding=None,**kwargs):
         super(ESHGCNWord2Vec,self).__init__()
-        self.single = config.single
         self.num_layers = config.num_layers
         self.hid_dim = config.hid_dim
         self.out_dim = config.out_dim
@@ -60,14 +58,8 @@ class ESHGCNWord2Vec(nn.Module):
         self.att = MutiAttentionLayer(self.hid_dim,self.hid_dim,self.hid_dim)
         self.sfu = SFU(self.hid_dim,self.hid_dim)
         # output layer
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.hid_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            
-            self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size) 
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.hid_dim,self.class_size)
     def get_features(self,content_chars,c_mask,words2ids,i_mask,entropy_mat):
         # chars embedding and encoding
         c_emb = self.c_embedding(content_chars)
@@ -92,17 +84,13 @@ class ESHGCNWord2Vec(nn.Module):
         """
         dcaps_hid,_ = self.get_features(content_chars,c_mask,words2ids,i_mask,entropy_mat)
         # output layer
-        if self.single:
-            output = self.pred(dcaps_hid.sum(dim=1))
-            logits = F.log_softmax(output,dim=-1)
-        else:
-            logits = self.pred(dcaps_hid)
+        output = self.pred(dcaps_hid.sum(dim=1))
+        logits = F.log_softmax(output,dim=-1)
         return logits
 
 class ESHGCN(nn.Module):
     def __init__(self,config,w_embedding=None,**kwargs):
         super(ESHGCN,self).__init__()
-        self.single = config.single
         self.num_layers = config.num_layers
         self.hid_dim = config.hid_dim
         self.out_dim = config.out_dim
@@ -152,13 +140,8 @@ class ESHGCN(nn.Module):
         self.att = MutiAttentionLayer(self.hid_dim,self.hid_dim,self.hid_dim)
         self.sfu = SFU(self.hid_dim,self.hid_dim)
         # output layer
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.hid_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.hid_dim,self.class_size)
     def get_features(self,content,words2ids,i_mask,entropy_mat,**kwargs):
         # chars embedding and encoding
         device = next(self.parameters()).device
@@ -184,17 +167,13 @@ class ESHGCN(nn.Module):
         """
         dcaps_hid,_ = self.get_features(content,words2ids,i_mask,entropy_mat,**kwargs)
         # output layer
-        if self.single:
-            output = self.pred(dcaps_hid.sum(dim=1))
-            logits = F.log_softmax(output,dim=-1)
-        else:
-            logits = self.pred(dcaps_hid)
+        output = self.pred(dcaps_hid.sum(dim=1))
+        logits = F.log_softmax(output,dim=-1)
         return logits
 
 class GraphESHGCN(nn.Module):
     def __init__(self,config,w_embedding=None,**kwargs):
         super(GraphESHGCN,self).__init__()
-        self.single = config.single
         self.num_layers = config.num_layers
         self.hid_dim = config.hid_dim
         self.out_dim = config.out_dim
@@ -220,13 +199,8 @@ class GraphESHGCN(nn.Module):
                 self.graph_list.append(HyperGraphAttentionLayerSparse(self.hid_dim,self.hid_dim,self.dropout,
                                                                       alpha=0.1,transfer=True))
         # output layer
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.hid_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.hid_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.hid_dim,self.class_size)
     def get_features(self,words2ids,i_mask,entropy_mat):
         # words embedding and graph encoding
         w_emb = self.w_embedding(words2ids)
@@ -243,12 +217,6 @@ class GraphESHGCN(nn.Module):
         """
         dcaps_hid = self.get_features(words2ids,i_mask,entropy_mat)
         # output layer
-        if self.single:
-            output = self.pred(dcaps_hid.sum(dim=1))
-            logits = F.log_softmax(output,dim=1)
-        else:
-            logits = self.pred(dcaps_hid)
+        output = self.pred(dcaps_hid.sum(dim=1))
+        logits = F.log_softmax(output,dim=1)
         return logits
-
-
-

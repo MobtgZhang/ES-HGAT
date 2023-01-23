@@ -25,26 +25,20 @@ class Config:
             delattr(self,name)
 def get_config(args,config = None):
     config = config or Config(args.config_file)
-    if args.dataset in ["wrime-ver1","wrime-ver2"]:
-        config.add_attr("single",False)
-        config.add_attr("label_size",8)
-        config.add_attr("class_size",4)
-        args.lang = 'jp'
-    elif args.dataset == "CLUEEmotion2020":
-        config.add_attr("single",True)
+    if args.dataset == "CLUEEmotion2020":
         config.add_attr("class_size",7)
         args.lang = 'zh'
     elif args.dataset == "SimplifyWeibo4Moods":
-        config.add_attr("single",True)
         config.add_attr("class_size",4)
         args.lang = 'zh'
     elif args.dataset == "TouTiaoNews":
-        config.add_attr("single",True)
         config.add_attr("class_size",15)
         args.lang = 'zh'
     elif args.dataset == "NLPCC2018Task1":
-        config.add_attr("single",True)
         config.add_attr("class_size",5)
+        args.lang = 'zh'
+    elif args.dataset == "IndustryData":
+        config.add_attr("class_size",6)
         args.lang = 'zh'
     else:
         raise ValueError("The doesn't exist %s dataset."%args.dataset)
@@ -127,12 +121,8 @@ def check_args(args):
     assert ((args.config_file and os.path.exists(args.config_file)) or os.path.exists(config_file))
     if not args.config_file or not os.path.exists(args.config_file):
         args.config_file = config_file
-    if args.dataset in ["AiChallenger2018","CLUEEmotion2020","CarsReviews","SimplifyWeibo4Moods","TouTiaoNews","NLPCC2018Task1"]:
-        args.lang = 'zh'
-    elif args.dataset in ["wrime-ver1","wrime-ver2"]:
-        args.lang = 'jp'
-    else:
-        raise ValueError("The doesn't exist %s dataset."%args.dataset)
+    assert args.dataset in ["CLUEEmotion2020","SimplifyWeibo4Moods","TouTiaoNews","NLPCC2018Task1","IndustryData"]
+    args.lang = 'zh'
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir',default='./data',type=str)

@@ -13,7 +13,6 @@ from znlp.data import Dictionary, to_var
 from znlp.data import ContentReviewDataset,batchfy
 from znlp.data import Timer,DataSaver
 from znlp.eval import evaluate
-from znlp.loss import MultipleLoss
 
 logger = logging.getLogger()
 from config import get_models,check_args,get_args

@@ -14,7 +14,6 @@ from ..layers import MultiCNNLayer,MatchSimpleNet
 class TextCNNWords(nn.Module):
     def __init__(self,config,w_embedding=None,**kwargs):
         super(TextCNNWords,self).__init__()
-        self.single = config.single
         self.n_filters = config.n_filters
         self.filter_sizes = config.filter_sizes
         self.out_dim = config.out_dim
@@ -28,13 +27,8 @@ class TextCNNWords(nn.Module):
             self.w_embedding = nn.Embedding.from_pretrained(w_embedding)
         self.mask_embedding = nn.Embedding(2,self.embedding_dim)
         self.cnn = MultiCNNLayer(self.embedding_dim,self.n_filters,self.filter_sizes,self.out_dim,self.dropout)
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.out_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.out_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.out_dim,self.class_size)
     def forward(self,content_words,w_mask,**kwargs):
         """
         'words2ids', 'i_mask', 'content_chars', 'c_mask', 'content_words', 'w_mask', 'entropy_mat', 'paris_mat'
@@ -43,11 +37,7 @@ class TextCNNWords(nn.Module):
         w_mask = self.mask_embedding(w_mask)
         w_hid = w_emb*torch.sigmoid(w_mask)
         w_hid = self.cnn(w_hid)
-        if self.single:
-            logits = self.pred(w_hid.sum(dim=1))
-            logits = F.log_softmax(logits,dim=1)
-        else:
-            logits = self.pred(w_hid)
+        logits = self.pred(w_hid)
         return logits
 
 class TextCNNChars(nn.Module):
@@ -67,13 +57,8 @@ class TextCNNChars(nn.Module):
             self.c_embedding = nn.Embedding.from_pretrained(c_embedding)
         self.mask_embedding = nn.Embedding(2,self.embedding_dim)
         self.cnn = MultiCNNLayer(self.embedding_dim,self.n_filters,self.filter_sizes,self.out_dim,self.dropout)
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.out_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.out_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.out_dim,self.class_size)
     def forward(self,content_chars,c_mask,**kwargs):
         """
         'words2ids', 'i_mask', 'content_chars', 'c_mask', 'content_words', 'w_mask', 'entropy_mat', 'paris_mat'
@@ -82,11 +67,8 @@ class TextCNNChars(nn.Module):
         c_mask = self.mask_embedding(c_mask)
         c_hid = c_emb*torch.sigmoid(c_mask)
         c_hid = self.cnn(c_hid)
-        if self.single:
-            logits = self.pred(c_hid.sum(dim=1))
-            logits = F.log_softmax(logits,dim=1)
-        else:
-            logits = self.pred(c_hid)
+        logits = self.pred(c_hid.sum(dim=1))
+        logits = F.log_softmax(logits,dim=1)
         return logits
 
 class PretrainCNNModel(nn.Module):
@@ -112,20 +94,14 @@ class PretrainCNNModel(nn.Module):
         self.filter_sizes = config.filter_sizes
         self.out_dim = config.out_dim
         self.dropout = config.dropout
-        self.single = config.single
         self.hid_dim = config.hid_dim
         self.encode = nn.Sequential(
             nn.Linear(self.pretrain.config.hidden_size,self.hid_dim),
             nn.GELU()
         )
         self.cnn = MultiCNNLayer(self.hid_dim,self.n_filters,self.filter_sizes,self.out_dim,self.dropout)
-        if self.single:
-            self.class_size = config.class_size
-            self.pred = nn.Linear(self.out_dim,self.class_size)
-        else:
-            self.class_size = config.class_size
-            self.label_size = config.label_size
-            self.pred = MatchSimpleNet(self.out_dim,self.label_size,self.class_size)
+        self.class_size = config.class_size
+        self.pred = nn.Linear(self.out_dim,self.class_size)
     def forward(self,content,**kwargs):
         # chars embedding and encoding
         device = next(self.parameters()).device
@@ -136,11 +112,8 @@ class PretrainCNNModel(nn.Module):
         dc_hid = self.encode(dc_hid)
         dc_hid = self.cnn(dc_hid)
         # output layer
-        if self.single:
-            output = self.pred(dc_hid.sum(dim=1))
-            logits = F.log_softmax(output,dim=-1)
-        else:
-            logits = self.pred(dc_hid)
+        output = self.pred(dc_hid.sum(dim=1))
+        logits = F.log_softmax(output,dim=-1)
         return logits
 
 
