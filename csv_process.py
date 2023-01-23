@@ -275,5 +275,23 @@ def split_nlpcc2018task1_dataset(data_dir,result_dir,tokenizer):
         save_dataset_file = os.path.join(result_dir,"%sset.json"%tag_dict[tag_name])
         split_content_labels(save_dataset_file,tokenizer,id_dataset,content_dataset,labels_dataset)
         logger.info("File saved in %s"%save_dataset_file)
-
-          
+def split_industrial_dataset(data_dir,result_dir,tokenizer,train_per= 0.6):
+    load_filename = os.path.join(data_dir,"data-v4.0.csv")
+    tags_list = ["train","valid","test"]
+    all_dataset = pd.read_csv(load_filename)
+    all_dataset = sklearn.utils.shuffle(all_dataset)
+    dev_per = (1.0-train_per)/2.0
+    train_len = int(train_per*len(all_dataset))
+    dev_len = int((train_per+dev_per)*len(all_dataset))
+    train_dataset = all_dataset.iloc[:train_len].copy()
+    dev_dataset = all_dataset.iloc[train_len:dev_len].copy()
+    test_dataset = all_dataset.iloc[dev_len:].copy()
+    del all_dataset
+    dataset_list = [train_dataset,dev_dataset,test_dataset]
+    for name,dataset in zip(tags_list,dataset_list):
+        id_dataset = dataset["index"].values.tolist()
+        content_dataset = dataset["content"].values.tolist()
+        labels_dataset = dataset["class"].values.tolist()
+        save_dataset_file = os.path.join(result_dir,"%sset.json"%name)
+        split_content_labels(save_dataset_file,tokenizer,id_dataset,content_dataset,labels_dataset)
+        logger.info("File saved in %s"%save_dataset_file)

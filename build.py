@@ -10,7 +10,8 @@ from znlp.utils import build_embeddings
 from preprocess import build_graph,build_dictionary
 from csv_process import split_aichallenger2018_dataset,split_carsreviews_dataset
 from csv_process import split_wrime_dataset
-from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset,split_nlpcc2018task1_dataset,split_toutiaonews_dataset
+from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset,\
+        split_nlpcc2018task1_dataset,split_toutiaonews_dataset,split_industrial_dataset
 logger = logging.getLogger()
 
 
@@ -23,7 +24,7 @@ def check_args(args):
 def main(args):
     data_dir = os.path.join(args.data_dir,args.dataset)
     result_dir = os.path.join(args.result_dir,args.dataset)
-    if args.dataset in ["AiChallenger2018","CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1"]:
+    if args.dataset in ["AiChallenger2018","CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1","IndustryData"]:
         args.lang = "zh"
         args.embedding_file = "./vec/cc.zh.300.vec"
     elif args.dataset in ["wrime-ver1","wrime-ver2"]:
@@ -59,6 +60,10 @@ def main(args):
         if len(os.listdir(result_dir))==0:
             tokenizer = JiebaTokenizer()
             split_simplifyweibo4moods_dataset(data_dir,result_dir,tokenizer,args.percentage)
+    elif args.dataset == "IndustryData":
+        if len(os.listdir(result_dir))==0:
+            tokenizer = JiebaTokenizer()
+            split_industrial_dataset(data_dir,result_dir,tokenizer,args.percentage)
     else:
         raise ValueError("The doesn't exist %s dataset."%args.dataset)
     logger.info("The file saved in %s"%result_dir)
