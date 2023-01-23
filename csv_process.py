@@ -21,7 +21,7 @@ def split_clueemotion2020_dataset(data_dir,result_dir,tokenizer):
     }
     save_dict_file = os.path.join(result_dir,"names-dict.json")
     with open(save_dict_file,mode="w",encoding="utf-8") as wfp:
-        jline = json.dumps(save_data_dict)
+        jline = json.dumps(save_data_dict,ensure_ascii=False)
         wfp.write(jline)
     for data_type in data_type_list:
         load_txt_file = os.path.join(data_dir,"%s.txt"%data_type)
@@ -35,7 +35,7 @@ def split_clueemotion2020_dataset(data_dir,result_dir,tokenizer):
                       "content":tokenizer.seg(data_dict['content']),
                       "labels":label2id[data_dict['label']]
                     }
-                    jline = json.dumps(save_data_dict)
+                    jline = json.dumps(save_data_dict,ensure_ascii=False)
                     wfp.write(jline+"\n")
 def split_simplifyweibo4moods_dataset(data_dir,result_dir,tokenizer,train_per = 0.7):
     load_train_file = os.path.join(data_dir,'simplifyweibo_4_moods.csv')
@@ -53,7 +53,7 @@ def split_simplifyweibo4moods_dataset(data_dir,result_dir,tokenizer,train_per = 
     }
     save_dict_file = os.path.join(result_dir,"names-dict.json")
     with open(save_dict_file,mode="w",encoding="utf-8") as wfp:
-        jline = json.dumps(save_data_dict)
+        jline = json.dumps(save_data_dict,ensure_ascii=False)
         wfp.write(jline)
     all_dataset = sklearn.utils.shuffle(all_dataset)
     dev_per = (1.0-train_per)/2.0
@@ -96,7 +96,7 @@ def split_toutiaonews_dataset(data_dir,result_dir,tokenizer,train_per = 0.7):
     }
     save_dict_file = os.path.join(result_dir,"names-dict.json")
     with open(save_dict_file,mode="w",encoding="utf-8") as wfp:
-        jline = json.dumps(save_data_dict)
+        jline = json.dumps(save_data_dict,ensure_ascii=False)
         wfp.write(jline)
     all_dataset = sklearn.utils.shuffle(all_dataset)
     dev_per = (1.0-train_per)/2.0
@@ -130,7 +130,7 @@ def split_nlpcc2018task1_dataset(data_dir,result_dir,tokenizer):
     }
     save_dict_file = os.path.join(result_dir,"names-dict.json")
     with open(save_dict_file,mode="w",encoding="utf-8") as wfp:
-        jline = json.dumps(save_data_dict)
+        jline = json.dumps(save_data_dict,ensure_ascii=False)
         wfp.write(jline)
     for tag_name in tag_dict:
         load_file = os.path.join(data_dir,'%s.txt'%tag_name)

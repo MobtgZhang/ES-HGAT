@@ -14,7 +14,7 @@ def split_content_labels(save_file_name,tokenizer,data_ids,data_contents,data_la
                 "content":tokenizer.seg(content),
                 "labels":labels
             }
-            jline = json.dumps(data_dict)
+            jline = json.dumps(data_dict,ensure_ascii=False)
             wfp.write(jline+"\n")
 def build_embeddings(load_embedding_file,embedding_file,data_dict):
     with open(load_embedding_file,mode="r",encoding='utf-8') as rfp:

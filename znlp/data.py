@@ -61,7 +61,7 @@ class Dictionary:
                 "ind2token":self.ind2token,
                 "token2ind":self.token2ind,
             }
-            json.dump(data,wfp)
+            json.dump(data,wfp,ensure_ascii=False)
     @staticmethod
     def load(load_file):
         tp_dict = Dictionary()
