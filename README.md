@@ -1,1 +1,1 @@
-The offical code for ES-HGCN model.
+The offical code for ES-HGAT model.
