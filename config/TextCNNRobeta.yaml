@@ -1,9 +1,0 @@
-pretrain_path: clue/roberta_chinese_base
-hid_dim: 300
-n_filters: 3
-filter_sizes:
-  - 3
-  - 4
-  - 5
-out_dim: 150
-dropout: 0.2

@@ -1,45 +1,37 @@
-import copy
 import os
-import logging
 import time
+import logging
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from torch.utils.data import DataLoader
 
-from znlp.data import Dictionary, to_var
-from znlp.data import ContentReviewDataset,batchfy
-from znlp.data import Timer,DataSaver
+logger = logging.getLogger()
+from config import check_args,get_args,get_models
+from znlp.data import ContentReviewDataset
+from znlp.data import batchfy
+from znlp.data import to_var
+from znlp.utils import DataSaver,Timer
 from znlp.eval import evaluate
 
-logger = logging.getLogger()
-from config import get_models,check_args,get_args
-  
 def main(args):
-    device = torch.device("cpu" if not args.cuda and torch.cuda.is_available() else "cuda:%d"%args.device_id)
+    result_dir = os.path.join(args.result_dir,args.dataset)
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # preparing the dataset
-    words_dict_file_name = os.path.join(args.result_dir,args.dataset,"words-dict.json")
-    words_dict = Dictionary.load(words_dict_file_name)
-    chars_dict_file_name = os.path.join(args.result_dir,args.dataset,"chars-dict.json")
-    chars_dict = Dictionary.load(chars_dict_file_name)
-    # preparing the dataset
-    load_train_dataset_file = os.path.join(args.result_dir,args.dataset,"train-graph.pkl")
-    load_valid_dataset_file = os.path.join(args.result_dir,args.dataset,"valid-graph.pkl")
-    load_test_dataset_file = os.path.join(args.result_dir,args.dataset,"test-graph.pkl")
-    train_dataset = ContentReviewDataset(load_train_dataset_file,words_dict,chars_dict)
+    train_dataset = ContentReviewDataset(result_dir,"train",args.pretrain_path,args.window,args.mat_type)
     train_loader = DataLoader(train_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
-    valid_dataset = ContentReviewDataset(load_valid_dataset_file,words_dict,chars_dict)
-    valid_loader = DataLoader(valid_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
-    if os.path.exists(load_test_dataset_file):
-        test_dataset = ContentReviewDataset(load_test_dataset_file,words_dict,chars_dict)
+    dev_dataset = ContentReviewDataset(result_dir,"dev",args.pretrain_path,args.window,args.mat_type)
+    dev_loader = DataLoader(dev_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
+    load_test_file = os.path.join(result_dir,"testset.json")
+    if os.path.exists(load_test_file):
+        test_dataset = ContentReviewDataset(result_dir,"dev",args.pretrain_path,args.window,args.mat_type)
         test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
     else:
-        test_dataset = None
         test_loader = None
+    args.pretrain_path = train_dataset.tokenizer_file
     # preparing the model
-    model = get_models(args)
+    model = get_models(args,pretrain_path=args.pretrain_path,class_size=train_dataset.class_size)
     model.to(device)
     loss_fn = nn.CrossEntropyLoss()
     if args.optim == "AdamW":
@@ -74,7 +66,7 @@ def main(args):
             optimizer.zero_grad()
             re_dict,targets = item
             predicts = model(**re_dict)
-            loss = loss_fn(predicts,targets)
+            loss = loss_fn(predicts,targets)            
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
             optimizer.step()
@@ -87,7 +79,7 @@ def main(args):
             train_loss,train_f1val,train_emval = evaluate(train_loader,model,loss_fn,device,"trainset test")
             train_saver.add_values(train_f1val,train_emval,train_loss,train_t)
         valid_timer.reset()
-        valid_loss,valid_f1val,valid_emval = evaluate(valid_loader,model,loss_fn,device,"validset test",args.save_attention_file)
+        valid_loss,valid_f1val,valid_emval = evaluate(dev_loader,model,loss_fn,device,"validset test")
         valid_t = valid_timer.time()
         valid_saver.add_values(valid_f1val,valid_emval,valid_loss,valid_t)
         if test_loader is not None:
@@ -131,5 +123,4 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.info(str(args))
     main(args)
-
-
+    

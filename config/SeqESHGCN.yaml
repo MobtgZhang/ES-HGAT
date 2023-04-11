@@ -1,3 +1,0 @@
-hid_dim: 200
-dropout: 0.2
-pretrain_path: hfl/chinese-xlnet-base

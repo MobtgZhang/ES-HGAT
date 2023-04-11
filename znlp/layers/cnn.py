@@ -32,5 +32,3 @@ class MultiCNNLayer(nn.Module):
         cat = self.dropout(torch.cat(pooled, dim=-1))  # [batch size, n_filters * len(filter_sizes)]
         cat = cat.transpose(2,1)
         return self.fc(cat)
-
-

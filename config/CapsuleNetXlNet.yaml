@@ -1,5 +1,0 @@
-embedding_dim: 300
-num_capsules: 5
-capsules_dim: 100
-num_routing: 3
-pretrain_path: ./chinese-xlnet-base

@@ -82,7 +82,7 @@ class GraphConvolution(nn.Module):
         return self.__class__.__name__ + ' (' \
                + str(self.in_features) + ' -> ' \
                + str(self.out_features) + ')'   
-
+    
 class VGAE(nn.Module):
     def __init__(self,in_dim,hid_dim,out_dim,dropout):
         super(VGAE,self).__init__()

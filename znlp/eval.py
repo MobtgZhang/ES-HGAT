@@ -1,9 +1,10 @@
-from tqdm import tqdm
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .data import to_var
+from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score
 
 def evaluate(dataloader,model,loss_fn,device,name,save_file=None):

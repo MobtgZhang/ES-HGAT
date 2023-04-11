@@ -1,165 +1,47 @@
 import os
-import copy
 import math
 import json
-import time
 import pickle
 import numpy as np
-import pandas as pd
-import torch
-from torch.utils.data import Dataset
 
-def to_var(object_value,device):
-    if type(object_value) is dict:
-        for key in object_value:
-            object_value[key] = to_var(object_value[key],device)
-    elif type(object_value) is list:
-        for idx in range(len(object_value)):
-            object_value[idx] = to_var(object_value[idx],device)
-    elif type(object_value) is tuple:
-        re_list = []
-        for idx in range(len(object_value)):
-            re_list.append(to_var(object_value[idx],device))
-        object_value = re_list
-    elif type(object_value) is str:
-        return object_value
+from tqdm import tqdm
+import torch
+from transformers import AutoTokenizer
+
+def create_entropy_graph(content,window_size):
+    words2freq = {}
+    content = list(content)
+    for word in content:
+        if word in words2freq:
+            words2freq[word] += 1.0
+        else:
+            words2freq[word] = 1.0
+    words2freq = {w:words2freq[w]/len(words2freq) for w in words2freq}
+    win_list = []
+    if window_size>=len(content):
+        win_list.append(content)
     else:
-        object_value = torch.from_numpy(object_value).to(device)
-    return object_value
-class Dictionary:
-    def __init__(self):
-        self.name = 'default'
-        self.ind2token = ['<PAD>','<START>','<END>','<UNK>',]
-        self.token2ind = {'<PAD>':0,'<START>':1,'<END>':2,'<UNK>':3}
-        self.start_index = 0
-        self.end_index = len(self.ind2token)
-    def __iter__(self):
-        return self
-    def __next__(self):
-        if self.start_index < self.end_index:
-            ret = self.ind2token[self.start_index]
-            self.start_index += 1
-            return ret
-        else:
-            raise StopIteration
-    def __getitem__(self,item):
-        if type(item) == str:
-            return self.token2ind.get(item,3)
-        elif type(item) == int:
-            word = self.ind2token[item]
-            return word
-        else:
-            raise IndexError()
-    def add(self,word):
-        if word not in self.token2ind:
-            self.token2ind[word] = len(self.ind2token)
-            self.ind2token.append(word)
-            self.end_index = len(self.ind2token)
-    def save(self,save_file):
-        with open(save_file,"w",encoding="utf-8") as wfp:
-            data = {
-                "ind2token":self.ind2token,
-                "token2ind":self.token2ind,
-            }
-            json.dump(data,wfp,ensure_ascii=False)
-    @staticmethod
-    def load(load_file):
-        tp_dict = Dictionary()
-        with open(load_file,"r",encoding="utf-8") as rfp:
-            data = json.load(rfp)
-            tp_dict.token2ind = data["token2ind"]
-            tp_dict.ind2token = data["ind2token"]
-            tp_dict.end_index = len(tp_dict.ind2token)
-        return tp_dict
-    def __contains__(self,word):
-        assert type(word) == str
-        return word in self.token2ind
-    def __len__(self):
-        return len(self.token2ind)
-    def __repr__(self):
-        return '{}(num_keys={})'.format(
-            self.__class__.__name__,len(self.token2ind))
-    def __str__(self):
-        return '{}(num_keys={})'.format(
-            self.__class__.__name__,len(self.token2ind))
-class ContentReviewDataset(Dataset):
-    def __init__(self,load_file_name,words_dict,chars_dict,max_limit_len=512,tokenizer=None):
-        super(ContentReviewDataset,self).__init__()
-        self.tokenizer = tokenizer
-        with open(load_file_name,mode="rb") as rfp:
-            self.dataset = pickle.load(rfp)
-        self.words_dict = words_dict
-        self.chars_dict = chars_dict
-        self.max_limit_len = max_limit_len
-    def __getitem__(self,idx):
-        re_val = copy.copy(self.dataset[idx])
-        content_chars = [self.chars_dict[w] for w in list(self.dataset[idx]['content'].replace(" ",""))]
-        re_val['content_chars'] = content_chars
-        content_words = [self.words_dict[w] for w in list(self.dataset[idx]['content'].split())]
-        re_val['content_words'] = content_words
-        id2words = [self.words_dict[w] for w in self.dataset[idx]['id2words']]
-        re_val['id2words'] = id2words
-        re_val['content'] = self.dataset[idx]['content'].replace(" ","")
-        return re_val
-    def __len__(self,):
-        return len(self.dataset)
-def batchfy(batch):
-    """_summary_
-    Args:
-        batch : batchfy the dataset
-    Returns:
-        dict: 
-        id2words,i_mask
-        content_chars,c_mask
-        content_words,w_mask
-        entropy_mat,paris_mat
-        list:
-        labels_list
-    """
-    re_dict = {}
-    index_list = [item['index'] for item in batch]
-    # key words
-    max_words_len =  max([len(item['id2words']) for item in batch])
-    id2words_list = [item['id2words']+(max_words_len-len(item['id2words']))*[0] for item in batch]
-    id2words_list = np.array(id2words_list,dtype=np.int64)
-    i_mask_list = [len(item['id2words'])*[1]+(max_words_len-len(item['id2words']))*[0] for item in batch]
-    i_mask_list = np.array(i_mask_list,dtype=np.int64)
-    re_dict["words2ids"] = id2words_list
-    re_dict["i_mask"] = i_mask_list
-    # content chars
-    max_content_c_len = max([len(item['content_chars']) for item in batch])
-    chars_list = [item['content_chars']+(max_content_c_len-len(item['content_chars']))*[0] for item in batch]
-    chars_list = np.array(chars_list,dtype=np.int64)
-    c_mask_list = [len(item['content_chars'])*[1]+(max_content_c_len-len(item['content_chars']))*[0] for item in batch]
-    c_mask_list = np.array(c_mask_list,dtype=np.int64)
-    re_dict["content_chars"] = chars_list
-    re_dict["c_mask"] = c_mask_list
-    # content words
-    max_content_w_len = max([len(item['content_words']) for item in batch])
-    words_list = [item['content_words']+(max_content_w_len-len(item['content_words']))*[0] for item in batch]
-    words_list = np.array(words_list,dtype=np.int64)
-    w_mask_list = [len(item['content_words'])*[1]+(max_content_w_len-len(item['content_words']))*[0] for item in batch]
-    w_mask_list = np.array(w_mask_list,dtype=np.int64)
-    re_dict["content_words"] = words_list
-    re_dict["w_mask"] = w_mask_list
-    # entropy mat
-    entropy_mat = [np.pad(item['entropy_mat'],[(0,max_words_len-item['entropy_mat'].shape[0]),(0,max_words_len-item['entropy_mat'].shape[1])]) if item['entropy_mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
-    entropy_mat = np.array(entropy_mat,np.float32)
-    re_dict["entropy_mat"] = entropy_mat
-    # paris mat
-    paris_mat = [np.pad(item['paris_mat'],[(0,max_words_len-item['paris_mat'].shape[0]),(0,max_words_len-item['paris_mat'].shape[1])]) if item['paris_mat'].shape[0] != 0 else np.zeros(shape=(max_words_len,max_words_len)) for item in batch]
-    paris_mat = np.array(paris_mat,np.float32)
-    re_dict["paris_mat"] = paris_mat
-    # content
-    content_list = [item['content'] for item in batch]
-    re_dict["content"] = content_list
-    # label 
-    labels_list = [item['label'] for item in batch]
-    labels_list = np.array(labels_list,np.int64)
-    return re_dict,labels_list
-    
-def create_paris_graph(content,id2words,window_size):
+        for idx in range(len(content) - window_size + 1):
+            win_list.append(content[idx:idx+window_size])
+    for win in win_list:
+        w2f = {}
+        for w in win:
+            if w not in w2f:
+                w2f[w] = 1.0
+            else:
+                w2f[w] += 1.0    
+        words2freq = {w:words2freq[w] + w2f[w]/len(win) if w in w2f else words2freq[w] for w in words2freq}
+    mat = []
+    for pw in content:
+        tmp_list = []
+        for qw in content:
+            tmp_list.append(words2freq[pw]*math.log(1.0+words2freq[pw]/words2freq[qw]))
+        mat.append(tmp_list)
+    mat = np.array(mat,dtype=np.float32)
+    return mat
+def create_paris_graph(content,window_size):
     doc_word_id_map = {}
+    id2words = list(set(content))
     for j in range(len(id2words)):
         doc_word_id_map[id2words[j]] = j
     # sliding windows
@@ -192,8 +74,8 @@ def create_paris_graph(content,id2words,window_size):
                     word_pair_count[word_pair_key] += 1.
                 else:
                     word_pair_count[word_pair_key] = 1.
-    weight_len = len(id2words)
-    weight = np.zeros(shape=(weight_len,weight_len),dtype=np.float64)
+    weight_len = len(content)
+    weight = np.zeros(shape=(weight_len,weight_len),dtype=np.float32)
 
     for key in word_pair_count:
         word_p = key[0]
@@ -201,82 +83,121 @@ def create_paris_graph(content,id2words,window_size):
         if word_q not in doc_word_id_map or word_p not in doc_word_id_map:
             continue
         weight[doc_word_id_map[word_p],doc_word_id_map[word_q]] = word_pair_count[key]
-    adj_mat = np.array(weight,dtype=np.float64)
+    adj_mat = np.array(weight,dtype=np.float32)
     return adj_mat
-
-
-def create_entropy_graph(content,id2words,window):
-    words2freq = {}
-    for word in content:
-        if word in id2words:
-            if word in words2freq:
-                words2freq[word] += 1.0
-            else:
-                words2freq[word] = 1.0
-    words2freq = {w:words2freq[w]/len(words2freq) for w in words2freq}
-    win_list = []
-    if window>=len(content):
-        win_list.append(content)
+def get_len(tmp_len):
+    if tmp_len<64:
+        return 126
+    elif tmp_len<128:
+        return 190
+    elif tmp_len<192:
+        return 254
+    elif tmp_len<256:
+        return 382
+    elif tmp_len<384:
+        return 446
+    elif tmp_len<448:
+        return 510
     else:
-        for idx in range(len(content) - window + 1):
-            win_list.append(content[idx:idx+window])
-    for win in win_list:
-        w2f = {}
-        for w in win:
-            if w in id2words:
-                if w not in w2f:
-                    w2f[w] = 1.0
-                else:
-                    w2f[w] += 1.0    
-        words2freq = {w:words2freq[w] + w2f[w]/len(win) if w in w2f else words2freq[w] for w in words2freq}
-    mat = []
-    for pw in id2words:
-        tmp_list = []
-        for qw in id2words:
-            tmp_list.append(words2freq[pw]*math.log(1.0+words2freq[pw]/words2freq[qw]))
-        mat.append(tmp_list)
-    mat = np.array(mat,dtype=np.float64)
-    return mat
+        return 510
 
-class Timer(object):
-    """Computes elapsed time."""
-    def __init__(self):
-        self.running = True
-        self.total = 0
-        self.start = time.time()
-    def reset(self):
-        self.running = True
-        self.total = 0
-        self.start = time.time()
-        return self
-    def resume(self):
-        if not self.running:
-            self.running = True
-            self.start = time.time()
-        return self
-    def stop(self):
-        if self.running:
-            self.running = False
-            self.total += time.time() - self.start
-        return self
-    def time(self):
-        if self.running:
-            return self.total + time.time() - self.start
-        return self.total
-class DataSaver(object):
-    """save every epoch datas."""
-    def __init__(self,save_file_name):
-        names = ["f1_score","em_score","loss","time"]
-        self.value_list = pd.DataFrame(columns=names)
-        self.save_file_name = save_file_name
-    def add_values(self,f1_score,em_score,loss,time):
-        data = {"f1_score":f1_score,
-                "em_score":em_score,
-                "loss":loss,
-                "time":time}
-        idx = len(self.value_list)
-        self.value_list.loc[idx] = data
-        self.value_list.to_csv(self.save_file_name,index=None)
-
-
-
+class ContentReviewDataset(torch.utils.data.Dataset):
+    def __init__(self,result_dir,tag_name,tokenizer_file,window,mat_type):
+        super(ContentReviewDataset,self).__init__()
+        self.window = window
+        self.mat_type = mat_type
+        self.result_dir = result_dir
+        self.tokenizer_file = tokenizer_file
+        load_file = os.path.join(result_dir,"%sset.json"%tag_name)
+        
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_file,
+                add_special_tokens=False, # don't add CLS,SEP
+                do_lower_case=True)  # do the lower case
+        save_pkl_file = os.path.join(result_dir,"%s-graph.pkl"%tag_name)
+        save_label_file = os.path.join(result_dir,"names-dict.json")
+        with open(save_label_file,mode="r",encoding="utf-8") as rfp:
+            data_dict = json.loads(rfp.read())
+            self.class_size = len(data_dict["id2label"])
+        if not os.path.exists(save_pkl_file):
+            self.dataset = []
+            with open(load_file,mode="r",encoding="utf-8") as rfp:
+                all_lines = rfp.readlines()
+                self.avg_len = [len(json.loads(item)["content"]) for item in all_lines]
+                self.avg_len = sum(self.avg_len)/len(self.avg_len)
+                self.limits_len = get_len(self.avg_len)
+                for line in tqdm(all_lines,desc="loading dataset"):
+                    data_dict = json.loads(line)
+                    index = data_dict["index"]
+                    content = data_dict["content"]
+                    label = data_dict["label"]
+                    outputs = self.tokenizer(content,
+                                                padding=True,
+                                                truncation=True,
+                                                max_length=self.limits_len,)
+                    input_ids = outputs["input_ids"] + [0]*(self.limits_len-len(outputs["input_ids"]))
+                    attention_mask = [1]*len(outputs["input_ids"]) + [0]*(self.limits_len-len(outputs["input_ids"]))
+                    mat = create_entropy_graph(outputs["input_ids"],window_size=self.window)
+                    mat = np.pad(mat,[(0,self.limits_len-mat.shape[0]),(0,self.limits_len-mat.shape[1])])
+                    tmp_dict = {
+                        "index":index,
+                        "label":label,
+                        "mat":mat,
+                        "input_ids":input_ids,
+                        "attention_mask":attention_mask
+                    }
+                    self.dataset.append(tmp_dict)
+            data_details = {
+                "dataset":self.dataset,
+                "window":self.window,
+                "avg_len":self.avg_len,
+                "limits_len":self.limits_len,
+                "mat_type":self.mat_type,
+                "tokenizer_file":self.tokenizer_file,
+                "class_size":self.class_size
+            }
+            with open(save_pkl_file,mode="wb") as wfp:
+                pickle.dump(data_details,wfp)
+        else:
+            with open(save_pkl_file,mode="rb") as rfp:
+                data_details = pickle.load(rfp)
+            self.dataset = data_details["dataset"]
+            self.window = data_details["window"]
+            self.avg_len = data_details["avg_len"]
+            self.limits_len = data_details["limits_len"]
+            self.mat_type = data_details["mat_type"]
+            self.tokenizer_file = data_details["tokenizer_file"]
+            self.class_size = data_details["class_size"]
+    def __getitem__(self,idx):
+        return self.dataset[idx]
+    def __len__(self):
+        return len(self.dataset)
+def batchfy(batch):
+    index = [bn['index'] for bn in batch]
+    targets = np.array([bn["label"] for bn in batch])
+    adjmat = np.array([bn["mat"] for bn in batch],dtype=np.float32)
+    input_ids = np.array([bn["input_ids"] for bn in batch],dtype=np.int64)
+    attention_mask = np.array([bn["attention_mask"] for bn in batch])
+    re_dict = {
+        "index":index,
+        "input_ids":input_ids,
+        "attention_mask":attention_mask,
+        "adjmat":adjmat
+    }
+    return re_dict,targets
+def to_var(object_value,device):
+    if type(object_value) is dict:
+        for key in object_value:
+            object_value[key] = to_var(object_value[key],device)
+    elif type(object_value) is list:
+        for idx in range(len(object_value)):
+            object_value[idx] = to_var(object_value[idx],device)
+    elif type(object_value) is tuple:
+        re_list = []
+        for idx in range(len(object_value)):
+            re_list.append(to_var(object_value[idx],device))
+        object_value = re_list
+    elif type(object_value) is np.ndarray:
+        object_value = torch.from_numpy(object_value).to(device)
+    else:
+        pass
+    return object_value

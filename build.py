@@ -1,17 +1,11 @@
+import os
 import time
 import argparse
 import logging
-import os
-
-
-from znlp.data import Dictionary
-from znlp.tools import JiebaTokenizer
-from znlp.utils import build_embeddings
-from preprocess import build_graph,build_dictionary
-from csv_process import split_simplifyweibo4moods_dataset,split_clueemotion2020_dataset,\
-        split_nlpcc2018task1_dataset,split_toutiaonews_dataset,split_industrial_dataset
 logger = logging.getLogger()
 
+from preprocess import split_dataset
+# from preprocess import build_graph
 
 def check_args(args):
     result_dir = os.path.join("./result",args.dataset)
@@ -19,59 +13,11 @@ def check_args(args):
         os.makedirs(result_dir)
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)
-    args.embedding_file = "./vec/cc.zh.300.vec"
-    args.lang = "zh"
+    assert args.dataset in os.listdir(args.data_dir)
 def main(args):
-    data_dir = os.path.join(args.data_dir,args.dataset)
     result_dir = os.path.join(args.result_dir,args.dataset)
-    assert args.dataset in ["CLUEEmotion2020","TouTiaoNews","SimplifyWeibo4Moods","NLPCC2018Task1","IndustryData"]
-    if args.dataset == "CLUEEmotion2020":
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JiebaTokenizer()
-            split_clueemotion2020_dataset(data_dir,result_dir,tokenizer)
-    elif args.dataset == "TouTiaoNews":
-        data_dir = os.path.join(args.data_dir,"TouTiaoNews")
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JiebaTokenizer()
-            split_toutiaonews_dataset(data_dir,result_dir,tokenizer,args.percentage)
-    elif args.dataset == "NLPCC2018Task1":
-        data_dir = os.path.join(args.data_dir,"NLPCC2018Task1")
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JiebaTokenizer()
-            split_nlpcc2018task1_dataset(data_dir,result_dir,tokenizer)
-    elif args.dataset == "SimplifyWeibo4Moods":
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JiebaTokenizer()
-            split_simplifyweibo4moods_dataset(data_dir,result_dir,tokenizer,args.percentage)
-    elif args.dataset == "IndustryData":
-        if len(os.listdir(result_dir))==0:
-            tokenizer = JiebaTokenizer()
-            split_industrial_dataset(data_dir,result_dir,tokenizer,args.percentage)
-    else:
-        raise ValueError("The doesn't exist %s dataset."%args.dataset)
-    logger.info("The file saved in %s"%result_dir)
-    
-    type_list = ['train','valid','test']
-    words_dict_file = os.path.join(result_dir,"words-dict.json")
-    chars_dict_file = os.path.join(result_dir,"chars-dict.json")
-    if not os.path.exists(words_dict_file) or not os.path.exists(chars_dict_file) :
-        build_dictionary(result_dir,words_dict_file,chars_dict_file,type_list[:-1])
-    words_embedding_file = os.path.join(result_dir,"words-embedding.npy")
-    chars_embedding_file = os.path.join(result_dir,"chars-embedding.npy") 
-    if not os.path.exists(words_embedding_file):
-        data_dict = Dictionary.load(words_dict_file)
-        build_embeddings(args.embedding_file,words_embedding_file,data_dict)
-    if not os.path.exists(chars_embedding_file):
-        chars_dict_file = Dictionary.load(chars_dict_file)
-        build_embeddings(args.embedding_file,chars_embedding_file,chars_dict_file)
-    stop_words_file = os.path.join(args.data_dir,'stopwords_%s.json'%args.lang)
-    for dataset_type in type_list:
-        save_graph_file = os.path.join(result_dir,'%s-graph.pkl'%dataset_type)
-        load_dataset_file = os.path.join(result_dir,"%sset.json"%dataset_type)
-        if not os.path.exists(load_dataset_file):
-            continue
-        if not os.path.exists(save_graph_file):
-            build_graph(result_dir,stop_words_file,dataset_type,args.window) 
+    if len(os.listdir(result_dir))==0:
+        split_dataset(args)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir',default='./data',type=str)
@@ -81,6 +27,8 @@ if __name__ == "__main__":
     parser.add_argument('--percentage',default=0.7,type=float)
     parser.add_argument('--embedding-file',default=None,type=str)
     parser.add_argument('--window',default=4,type=int)
+    parser.add_argument('--version',default="3.0",type=str)
+    parser.add_argument('--mat-type',default="entropy",type=str)
     args = parser.parse_args()
     check_args(args)
     # first, create a project logger
@@ -101,5 +49,4 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.info(str(args))
     main(args)
-
-
+    
