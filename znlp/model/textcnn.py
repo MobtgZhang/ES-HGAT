@@ -6,12 +6,6 @@ from transformers import AutoModel
 
 from ..layers import MultiCNNLayer
 
-class TextCNN(nn.Module):
-    def __init__(self) -> None:
-        super(TextCNN,self).__init__()
-    def forward(self,):
-        pass
-    
 class TextCNNPre(nn.Module):
     def __init__(self,config):
         super(TextCNNPre,self).__init__()

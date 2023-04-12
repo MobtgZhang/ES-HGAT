@@ -6,11 +6,6 @@ from transformers import AutoModel
 
 from ..layers import CapsuleLayer
 
-class CapsuleNet(nn.Module):
-    def __init__(self):
-        super(CapsuleNet,self).__init__()
-    def forward(self):
-        pass
 class CapsuleNetPre(nn.Module):
     def __init__(self,config):
         super(CapsuleNetPre,self).__init__()
