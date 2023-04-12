@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from transformers import AutoModel
 
 from ..layers import HyperGraphAttentionLayerSparse
-from ..layers import MutiAttentionLayer,SFU
 
 class HyperGATPre(nn.Module):
     def __init__(self,config):

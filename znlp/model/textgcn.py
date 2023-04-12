@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from transformers import AutoModel
 
-from ..layers import GraphConvolution,MutiAttentionLayer,SFU
+from ..layers import GraphConvolution
 
 class TextGCNPre(nn.Module):
     def __init__(self,config):
