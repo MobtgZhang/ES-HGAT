@@ -115,7 +115,7 @@ def create_N15News(data_dir,result_dir,percentage=0.7):
     all_processed_list = []
     with open(load_filename,mode="r",encoding="utf-8") as rfp:
         all_data_list = json.load(rfp)
-        for item in all_data_list:
+        for item in tqdm(all_data_list,"loading file: %s"%load_filename):
             tmp_dict = {
                 "index":str(uuid.uuid1()).upper(),
                 "content":item["caption"],

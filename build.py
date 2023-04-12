@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger()
 
 from preprocess import split_dataset
-# from preprocess import build_graph
 
 def check_args(args):
     result_dir = os.path.join("./result",args.dataset)

@@ -23,12 +23,6 @@ def main(args):
     train_loader = DataLoader(train_dataset,batch_size= args.batch_size,shuffle=True,collate_fn=batchfy)
     dev_dataset = ContentReviewDataset(result_dir,"dev",args.pretrain_path,args.window,args.mat_type)
     dev_loader = DataLoader(dev_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
-    load_test_file = os.path.join(result_dir,"testset.json")
-    if os.path.exists(load_test_file):
-        test_dataset = ContentReviewDataset(result_dir,"dev",args.pretrain_path,args.window,args.mat_type)
-        test_loader = DataLoader(test_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
-    else:
-        test_loader = None
     args.pretrain_path = train_dataset.tokenizer_file
     # preparing the model
     model = get_models(args,pretrain_path=args.pretrain_path,class_size=train_dataset.class_size)
@@ -54,8 +48,6 @@ def main(args):
     valid_saver = DataSaver(save_model_file)
     valid_timer = Timer()
     save_model_file = os.path.join(model_dir,args.time_step + "-test.csv")
-    test_saver = DataSaver(save_model_file)
-    test_timer = Timer()
     best_em = 0.0
     for epoch in range(args.epoches):
         model.train()
@@ -82,11 +74,6 @@ def main(args):
         valid_loss,valid_f1val,valid_emval = evaluate(dev_loader,model,loss_fn,device,"validset test")
         valid_t = valid_timer.time()
         valid_saver.add_values(valid_f1val,valid_emval,valid_loss,valid_t)
-        if test_loader is not None:
-            test_timer.reset()
-            test_loss,test_f1val,test_emval = evaluate(test_loader,model,loss_fn,device,"testset test")
-            test_t = test_timer.time()
-            test_saver.add_values(test_f1val,test_emval,test_loss,test_t)
         if args.train_evaluate:
             logger.info("epoch:%d,train loss:%0.4f,valid loss:%0.4f, valid f1 score :%0.4f, valid em score :%0.4f"%
                         (epoch,train_loss,valid_loss,valid_f1val,valid_emval))
