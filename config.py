@@ -35,7 +35,7 @@ def get_args():
     parser.add_argument('--optim-step',default=1,type=int)
     parser.add_argument('--result-dir',default='./result',type=str)
     parser.add_argument('--model-name',default='ESHGAT',type=str)
-    parser.add_argument('--epoches',default=40,type=int)
+    parser.add_argument('--epoches',default=20,type=int)
     parser.add_argument('--checkpoint-file',default=None,type=str)
     parser.add_argument('--batch-size',default=32,type=int)
     parser.add_argument('--dataset',default='CLUEEmotion2020',type=str)
@@ -66,16 +66,13 @@ def check_args(args):
         args.pretrain_path = "bert-base-chinese"
 def get_models(args,config=None,**kwargs):
     model_dict = {
-        "TextCNN":TextCNN,
         "TextCNNPre":TextCNNPre,
-        "CapsuleNet":CapsuleNet,
         "CapsuleNetPre":CapsuleNetPre,
-        "HyperGAT":HyperGAT,
         "HyperGATPre":HyperGATPre,
-        "TextGCN":TextGCN,
         "TextGCNPre":TextGCNPre,
         "ESHGAT":ESHGAT,
         "GraphESHGAT":GraphESHGAT,
+        "CapsESHGAT":CapsESHGAT,
         "PretrainingModel":PretrainingModel,
     }
     assert args.model_name in model_dict

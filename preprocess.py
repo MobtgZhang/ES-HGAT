@@ -87,7 +87,7 @@ def create_chipCTC(data_dir,result_dir):
     load_category_file = os.path.join(data_dir,"category.xlsx")
     raw_label = pd.read_excel(load_category_file)
     id2label = [name.strip() for name in raw_label["Label Name"].values]
-    label2id = {name:str(idx) for idx,name in enumerate(id2label)}
+    label2id = {name:idx for idx,name in enumerate(id2label)}
     save_data_dict = {
         "id2label":id2label,
         "label2id":label2id
@@ -125,7 +125,7 @@ def create_N15News(data_dir,result_dir,percentage=0.7):
     id2label = set()
     for item in all_processed_list:id2label.add(item["label"].strip())
     id2label = list(id2label)
-    label2id = {name:str(idx) for idx,name in enumerate(id2label)}
+    label2id = {name:idx for idx,name in enumerate(id2label)}
     save_dict_file = os.path.join(result_dir,"names-dict.json")
     save_data_dict = {
         "id2label":id2label,

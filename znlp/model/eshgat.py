@@ -168,6 +168,7 @@ class GraphESHGAT(nn.Module):
         return logits
 class CapsESHGAT(nn.Module):
     def __init__(self,config):
+        super(CapsESHGAT,self).__init__()
         self.num_layers = config.num_layers
         self.hid_dim = config.hid_dim
         self.out_dim = config.out_dim
