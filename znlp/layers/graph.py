@@ -92,8 +92,8 @@ class VGAE(nn.Module):
         self.dropout = dropout
         
         self.base_gcn = GraphConvolution(in_dim,hid_dim,self.dropout)
-        self.gcn_mean = GraphGNN(hid_dim,out_dim,self.dropout)
-        self.gcn_logstddev = GraphGNN(hid_dim,out_dim,self.dropout)
+        self.gcn_mean = GraphConvolution(hid_dim,out_dim,self.dropout)
+        self.gcn_logstddev = GraphConvolution(hid_dim,out_dim,self.dropout)
         self.gelu = nn.GELU()
     def encode(self, x,adj_mat):
         batch_size,seq_len = x.size(0),x.size(1)

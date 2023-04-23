@@ -5,3 +5,7 @@ dropout: 0.2
 num_capsules: 3
 capsules_dim: 20
 num_routing: 4
+filter_sizes:
+  - 3
+  - 4
+  - 5

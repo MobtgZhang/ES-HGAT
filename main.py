@@ -25,7 +25,8 @@ def main(args):
     dev_loader = DataLoader(dev_dataset,batch_size= args.batch_size,shuffle=False,collate_fn=batchfy)
     args.pretrain_path = train_dataset.tokenizer_file
     # preparing the model
-    model = get_models(args,pretrain_path=args.pretrain_path,class_size=train_dataset.class_size)
+    model = get_models(args,pretrain_path=args.pretrain_path,class_size=train_dataset.class_size,limits_len=train_dataset.limits_len)
+    logger.info(model.config.__dict__)
     model.to(device)
     loss_fn = nn.CrossEntropyLoss()
     if args.optim == "AdamW":
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     fh.setLevel(logging.DEBUG)  # The switch of the output files for different log levels.
     # Create a `streamhandler` to print the messagae into the terminal, the level is above `error`.
     ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
+    ch.setLevel(logging.DEBUG)
     # Third step, define the format of the output `handler`.
     formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
     fh.setFormatter(formatter)

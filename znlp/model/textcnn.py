@@ -9,6 +9,7 @@ from ..layers import MultiCNNLayer
 class TextCNNPre(nn.Module):
     def __init__(self,config):
         super(TextCNNPre,self).__init__()
+        self.config = config
         self.pretrain = AutoModel.from_pretrained(config.pretrain_path)
         
         self.n_filters = config.n_filters

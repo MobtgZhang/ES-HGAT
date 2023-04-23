@@ -1,4 +1,3 @@
-pretrain_path: ./bert-base-chinese
 num_capsules: 5
 capsules_dim: 100
 num_routing: 3

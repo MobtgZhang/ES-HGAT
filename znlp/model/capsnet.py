@@ -9,6 +9,7 @@ from ..layers import CapsuleLayer
 class CapsuleNetPre(nn.Module):
     def __init__(self,config):
         super(CapsuleNetPre,self).__init__()
+        self.config = config
         self.pretrain = AutoModel.from_pretrained(config.pretrain_path)
         
         self.num_capsules = config.num_capsules

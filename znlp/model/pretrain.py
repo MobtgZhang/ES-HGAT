@@ -7,6 +7,7 @@ from transformers import AutoModel
 class PretrainingModel(nn.Module):
     def __init__(self,config):
         super(PretrainingModel,self).__init__()
+        self.config = config
         self.pretrain = AutoModel.from_pretrained(config.pretrain_path)
         self.hid_dim = self.pretrain.config.hidden_size
         # output layer

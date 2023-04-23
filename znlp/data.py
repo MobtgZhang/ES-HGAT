@@ -85,31 +85,17 @@ def create_paris_graph(content,window_size):
         weight[doc_word_id_map[word_p],doc_word_id_map[word_q]] = word_pair_count[key]
     adj_mat = np.array(weight,dtype=np.float32)
     return adj_mat
-def get_len(tmp_len):
-    if tmp_len<64:
-        return 126
-    elif tmp_len<128:
-        return 190
-    elif tmp_len<192:
-        return 254
-    elif tmp_len<256:
-        return 382
-    elif tmp_len<384:
-        return 446
-    elif tmp_len<448:
-        return 510
-    else:
-        return 510
 
 class ContentReviewDataset(torch.utils.data.Dataset):
-    def __init__(self,result_dir,tag_name,tokenizer_file,window,mat_type):
+    def __init__(self,result_dir,tag_name,tokenizer_file,window,mat_type,limits_len=256):
         super(ContentReviewDataset,self).__init__()
         self.window = window
         self.mat_type = mat_type
         self.result_dir = result_dir
         self.tokenizer_file = tokenizer_file
+        self.limits_len = limits_len
         load_file = os.path.join(result_dir,"%sset.json"%tag_name)
-        
+        print(tokenizer_file)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_file,
                 add_special_tokens=False, # don't add CLS,SEP
                 do_lower_case=True)  # do the lower case
@@ -124,7 +110,6 @@ class ContentReviewDataset(torch.utils.data.Dataset):
                 all_lines = rfp.readlines()
                 self.avg_len = [len(json.loads(item)["content"]) for item in all_lines]
                 self.avg_len = sum(self.avg_len)/len(self.avg_len)
-                self.limits_len = get_len(self.avg_len)
                 for line in tqdm(all_lines,desc="loading dataset"):
                     data_dict = json.loads(line)
                     index = data_dict["index"]

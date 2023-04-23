@@ -2,7 +2,10 @@ import os
 import yaml
 import argparse
 import torch
+import logging
 from znlp.model import *
+
+logger = logging.getLogger()
 
 class Config:
     def __init__(self,load_file_name=None):
@@ -13,7 +16,7 @@ class Config:
         with open(load_file_name,'r',encoding='utf8') as rfp:
             data_dict=yaml.safe_load(rfp)
         if data_dict is None:
-            raise ValueError("The yaml file is empty!")
+            logger.info("The yaml file is empty!")
         else:
             for key in data_dict:
                 setattr(self,key,data_dict[key])
@@ -29,8 +32,8 @@ def get_args():
     parser.add_argument('--log-dir',default='./log',type=str)
     parser.add_argument('--save-attention',action='store_true')
     parser.add_argument('--config-dir',default='./config',type=str)
+    parser.add_argument('--pretrain-path',default='bert-base-chinese',type=str)
     parser.add_argument('--config-file',default=None,type=str)
-    parser.add_argument('--pretrain-path',default=None,type=str)
     parser.add_argument('--optim',default="AdamW",type=str)
     parser.add_argument('--optim-step',default=1,type=int)
     parser.add_argument('--result-dir',default='./result',type=str)
@@ -46,7 +49,7 @@ def get_args():
     parser.add_argument('--train-evaluate',action='store_true')
     parser.add_argument('--device-id',type=int,default=0)
     parser.add_argument('--mat-type',default="entropy",type=str)
-    parser.add_argument('--window',default=4,type=int)
+    parser.add_argument('--window',default=3,type=int)
     args = parser.parse_args()
     return args
 
@@ -70,10 +73,16 @@ def get_models(args,config=None,**kwargs):
         "CapsuleNetPre":CapsuleNetPre,
         "HyperGATPre":HyperGATPre,
         "TextGCNPre":TextGCNPre,
+        "ESHGAT1":ESHGAT,
+        "ESHGAT2":ESHGAT,
         "ESHGAT":ESHGAT,
+        "ESHGAT4":ESHGAT,
+        "ESHGAT5":ESHGAT,
         "GraphESHGAT":GraphESHGAT,
         "CapsESHGAT":CapsESHGAT,
         "PretrainingModel":PretrainingModel,
+        "TestESHGAT":TestESHGAT,
+        "ESCapsHGAT":ESCapsHGAT
     }
     assert args.model_name in model_dict
     config = config or Config(args.config_file)

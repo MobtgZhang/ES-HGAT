@@ -9,17 +9,19 @@ from ..layers import GraphConvolution
 class TextGCNPre(nn.Module):
     def __init__(self,config):
         super(TextGCNPre,self).__init__()
+        self.config = config
         self.dropout = config.dropout
         self.nhid_dim = config.nhid_dim
         self.ohid_dim = config.ohid_dim
         self.pretrain = AutoModel.from_pretrained(config.pretrain_path)
-        self.gc1 = GraphConvolution(self.embedding_dim, self.nhid_dim)
+        self.gc1 = GraphConvolution(self.nhid_dim, self.nhid_dim)
         self.gc2 = GraphConvolution(self.nhid_dim, self.ohid_dim)
         self.encode = nn.Sequential(
-            nn.Linear(self.pretrain.config.hidden_size,self.ohid_dim),
+            nn.Linear(self.pretrain.config.hidden_size,self.nhid_dim),
             nn.GELU()
         )
         self.class_size = config.class_size
+        self.gelu = nn.GELU()
         self.pred = nn.Linear(self.ohid_dim,self.class_size)
     def forward(self,input_ids,attention_mask,adjmat,att_output=False,**kwargs):
         pooled_out = self.pretrain(input_ids=input_ids,attention_mask=attention_mask)
